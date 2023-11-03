@@ -1,4 +1,4 @@
-package org.main;
+package org.assessment;
 
 import javax.swing.*;
 import javax.swing.border.*;
