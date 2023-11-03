@@ -7,10 +7,6 @@ import java.awt.event.*;
 import java.io.*;
 import java.nio.file.*;
 import java.util.Properties;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.EnumSet;
 import java.util.regex.Pattern;
 
 public class CodeAssessment {
@@ -25,7 +21,9 @@ public class CodeAssessment {
     private LineNumberArea lineNumberArea;
     private JTextField fileNameLabel;
     private JTextField commentCountField;
-    private JCheckBox readOnlyCheckBox; // Checkbox for controlling read-only state
+    private JRadioButton readOnlyRadioButton; // Radio button for "Read-Only"
+    private JRadioButton editableRadioButton; // Radio button for "Editable"
+    private ButtonGroup radioButtonGroup; // Button group for radio buttons
 
     public CodeAssessment() {
         frame = new JFrame("Code Assessment");
@@ -34,12 +32,16 @@ public class CodeAssessment {
 
         textArea = new JTextArea();
         frame.add(new JScrollPane(textArea), BorderLayout.CENTER);
+        textArea.setEditable(false);
 
         lineNumberArea = new LineNumberArea(textArea);
         frame.add(lineNumberArea, BorderLayout.WEST);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         frame.add(buttonPanel, BorderLayout.NORTH);
+
+        JPanel paramPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        frame.add(paramPanel, BorderLayout.SOUTH);
 
         fileNameLabel = new JTextField(30);
         fileNameLabel.setEditable(false);
@@ -49,20 +51,15 @@ public class CodeAssessment {
         commentCountField = new JTextField(30);
         commentCountField.setEditable(false);
 
-        // Add a checkbox to control read-only state
-        readOnlyCheckBox = new JCheckBox("Read-Only");
-        readOnlyCheckBox.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent e) {
-                int state = e.getStateChange();
-                if (state == ItemEvent.SELECTED) {
-                    textArea.setEditable(false);
-                } else {
-                    textArea.setEditable(true);
-                }
-            }
-        });
-        readOnlyCheckBox.setSelected(true);
+        // Radio buttons for controlling read-only state
+        readOnlyRadioButton = new JRadioButton("Code Segmentation");
+        editableRadioButton = new JRadioButton("Code Grading");
+
+        // Add radio buttons to a button group
+        radioButtonGroup = new ButtonGroup();
+        radioButtonGroup.add(readOnlyRadioButton);
+        radioButtonGroup.add(editableRadioButton);
+        radioButtonGroup.setSelected(readOnlyRadioButton.getModel(), true); // Set "Read-Only" as default
 
         JButton openButton = new JButton("Open");
         JButton reopenButton = new JButton("Reopen");
@@ -73,9 +70,13 @@ public class CodeAssessment {
         buttonPanel.add(openButton);
         buttonPanel.add(previousButton);
         buttonPanel.add(saveAndOpenButton);
-        buttonPanel.add(readOnlyCheckBox);
         buttonPanel.add(fileNameLabel);
         buttonPanel.add(commentCountField);
+        buttonPanel.add(fileNameLabel);
+
+        paramPanel.add(readOnlyRadioButton);
+        paramPanel.add(editableRadioButton);
+        paramPanel.add(commentCountField);
 
         fileChooser = new JFileChooser();
         defaultFolder = new File(System.getProperty("user.dir"));
@@ -116,15 +117,27 @@ public class CodeAssessment {
             }
         });
 
-
         loadConfiguration();
 
         textArea.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    insertCommentPhrase();
-                    saveFile();
+                if (readOnlyRadioButton.isSelected()){
+                    if (e.getClickCount() == 2) {
+                        insertCommentPhrase();
+                        saveFile();
+                    }
+                }
+            }
+        });
+
+        readOnlyRadioButton.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    textArea.setEditable(false); // Set textArea to non-editable
+                } else {
+                    textArea.setEditable(true);
                 }
             }
         });
@@ -202,10 +215,15 @@ public class CodeAssessment {
             int lineEnd = textArea.getLineEndOffset(selectedRowIndex);
 
             String line = textArea.getText(lineStart, lineEnd - lineStart);
-            if (line.contains(commentPhrase)) {
+            String regex = "/\\*\\* ASSESSMENT.*?@grade .*?@feedback .*?\\*/";
+            if (line.matches(regex)) {
+                // Remove the existing Javadoc comment
                 textArea.getDocument().remove(lineStart, lineEnd - lineStart);
             } else {
-                String text = commentPhrase + "\n";
+                String text = "/** ASSESSMENT\n";
+                text += " * @grade \n";
+                text += " * @feedback \n";
+                text += " */\n";
                 textArea.getDocument().insertString(lineStart, text, null);
             }
             lineNumberArea.repaint();
@@ -273,8 +291,6 @@ public class CodeAssessment {
     }
 
     private void findRefCode() throws IOException {
-        //Pattern filePattern = Pattern.compile("RefCode\\.(java|cpp)$", Pattern.CASE_INSENSITIVE);
-
         int commentCount = 0;
 
         String folderPath = String.valueOf(currentFile.getParentFile());
@@ -298,7 +314,7 @@ public class CodeAssessment {
         }
         if (commentCount == 0) {
             JOptionPane.showMessageDialog(null, "RefCode.java or RefCode.cpp not found!");
-            System.exit(0);
+            //System.exit(0);
         }
     }
 
