@@ -1,4 +1,4 @@
-package core;
+package org.main;
 
 import javax.swing.*;
 import javax.swing.border.*;
