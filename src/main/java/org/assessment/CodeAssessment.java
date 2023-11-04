@@ -8,26 +8,23 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.nio.file.*;
-import java.util.Properties;
 import java.util.regex.Pattern;
 
 public class CodeAssessment {
 
-    private JFrame frame;
-    private JTextArea textArea;
-    private JFileChooser fileChooser;
-    private File defaultFolder;
-    private String commentPhrase;
-    private Pattern commentPattern;
+    private final JFrame frame;
+    private final JTextArea textArea;
+    private final JFileChooser fileChooser;
+    private final File defaultFolder;
+    int commentCount = 0;
     private File currentFile;
-    private LineNumberArea lineNumberArea;
-    private JTextField fileNameLabel;
-    private JTextField commentCountField;
-    private JRadioButton readOnlyRadioButton; // Radio button for "Read-Only"
-    private JRadioButton editableRadioButton; // Radio button for "Editable"
-    private ButtonGroup radioButtonGroup; // Button group for radio buttons
+    private final LineNumberArea lineNumberArea;
+    private final JTextField fileNameLabel;
+    private final JTextField commentCountField;
+    private final JRadioButton readOnlyRadioButton;
 
     public CodeAssessment() {
+
         frame = new JFrame("Code Assessment");
         frame.setSize(800, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -52,16 +49,15 @@ public class CodeAssessment {
 
         commentCountField = new JTextField(30);
         commentCountField.setEditable(false);
+        commentCountField.setFont(commentCountField.getFont().deriveFont(Font.BOLD));
 
-        // Radio buttons for controlling read-only state
         readOnlyRadioButton = new JRadioButton("Code Segmentation");
-        editableRadioButton = new JRadioButton("Code Grading");
+        JRadioButton editableRadioButton = new JRadioButton("Code Grading");
 
-        // Add radio buttons to a button group
-        radioButtonGroup = new ButtonGroup();
+        ButtonGroup radioButtonGroup = new ButtonGroup();
         radioButtonGroup.add(readOnlyRadioButton);
         radioButtonGroup.add(editableRadioButton);
-        radioButtonGroup.setSelected(readOnlyRadioButton.getModel(), true); // Set "Read-Only" as default
+        radioButtonGroup.setSelected(readOnlyRadioButton.getModel(), true);
 
         JButton openButton = new JButton("Open");
         JButton reopenButton = new JButton("Reopen");
@@ -119,8 +115,6 @@ public class CodeAssessment {
             }
         });
 
-        loadConfiguration();
-
         textArea.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -147,18 +141,6 @@ public class CodeAssessment {
         frame.setVisible(true);
     }
 
-    private void loadConfiguration() {
-        Properties properties = new Properties();
-        try (InputStream input = new FileInputStream("config.properties")) {
-            properties.load(input);
-            defaultFolder = new File(properties.getProperty("defaultFolder"));
-            commentPhrase = properties.getProperty("commentPhrase");
-        } catch (IOException e) {
-            commentPhrase = "/***SEPARATOR***/";
-            commentPattern = Pattern.compile("/\\*\\*\\*SEPARATOR\\*\\*\\*/");
-        }
-    }
-
     private void openFile() {
         fileChooser.setCurrentDirectory(defaultFolder);
         int returnVal = fileChooser.showOpenDialog(frame);
@@ -171,11 +153,13 @@ public class CodeAssessment {
                 reader.close();
                 lineNumberArea.repaint();
                 findRefCode();
+                paintLabels(currentFile.toPath(), Pattern.compile("@grade"));
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
+
 
     private void saveFile() {
         if (currentFile == null) {
@@ -217,11 +201,23 @@ public class CodeAssessment {
             int lineEnd = textArea.getLineEndOffset(selectedRowIndex);
 
             String line = textArea.getText(lineStart, lineEnd - lineStart);
-            String regex = "/\\*\\* ASSESSMENT.*?@grade .*?@feedback .*?\\*/";
-            if (line.matches(regex)) {
-                // Remove the existing Javadoc comment
-                textArea.getDocument().remove(lineStart, lineEnd - lineStart);
+
+            if (line.contains("ASSESSMENT") || line.contains("@grade") || line.contains("@feedback") || line.contains("*/")) {
+                if (line.contains("ASSESSMENT")) {
+                    // Find the line number containing "ASSESSMENT"
+                    int assessmentLine = selectedRowIndex;
+
+                    // Remove the next four lines
+                    for (int i = 0; i < 4; i++) {
+                        if (assessmentLine < textArea.getLineCount()) {
+                            int currentLineStart = textArea.getLineStartOffset(assessmentLine);
+                            int currentLineEnd = textArea.getLineEndOffset(assessmentLine);
+                            textArea.getDocument().remove(currentLineStart, currentLineEnd - currentLineStart);
+                        }
+                    }
+                }
             } else {
+                // Insert a new JavaDoc comment
                 String text = "/** ASSESSMENT\n";
                 text += " * @grade \n";
                 text += " * @feedback \n";
@@ -229,10 +225,12 @@ public class CodeAssessment {
                 textArea.getDocument().insertString(lineStart, text, null);
             }
             lineNumberArea.repaint();
+            saveFile(); // Save the file after removing the comment
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
     }
+
 
     private void saveAndOpenFile() {
         saveFile();
@@ -263,6 +261,7 @@ public class CodeAssessment {
             reader.close();
             fileNameLabel.setText(currentFile.getName());
             lineNumberArea.repaint();
+            paintLabels(currentFile.toPath(), Pattern.compile("@grade"));
             //findRefCode();
         } catch (IOException e) {
             e.printStackTrace();
@@ -293,7 +292,6 @@ public class CodeAssessment {
     }
 
     private void findRefCode() throws IOException {
-        int commentCount = 0;
 
         String folderPath = String.valueOf(currentFile.getParentFile());
         String refCodeJava = "RefCode.java";
@@ -307,8 +305,8 @@ public class CodeAssessment {
             if (files != null) {
                 for (File file : files) {
                     if (file.isFile() && (file.getName().equals(refCodeJava) || file.getName().equals(refCodeCPP))) {
-                        commentCount = countComments(Path.of(file.getPath()), commentPattern);
-                        commentCountField.setText("Separator Count: " + commentCount);
+                        commentCount = countComments(Path.of(file.getPath()), Pattern.compile("@grade"));
+                        commentCountField.setText("Number of Segments: " + commentCount);
                         break;
                     }
                 }
@@ -336,6 +334,20 @@ public class CodeAssessment {
 
         return commentCount;
     }
+
+    private void paintLabels(Path file, Pattern commentPattern) {
+        int fileCommentCount = countComments(file, commentPattern);
+        if (fileCommentCount != commentCount) {
+            // Set the text color of fileNameLabel and commentCountField to red
+            fileNameLabel.setForeground(Color.RED);
+            commentCountField.setForeground(Color.RED);
+        } else {
+            // Reset the text color to the default
+            fileNameLabel.setForeground(Color.GREEN);
+            commentCountField.setForeground(Color.GREEN);
+        }
+    }
+
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
