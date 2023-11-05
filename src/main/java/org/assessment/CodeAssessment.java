@@ -8,6 +8,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.nio.file.*;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 public class CodeAssessment {
@@ -17,6 +18,8 @@ public class CodeAssessment {
     private final JFileChooser fileChooser;
     private final File defaultFolder;
     int commentCount = 0;
+
+    Pattern commentPattern = Pattern.compile("@grade");
     private File currentFile;
     private final LineNumberArea lineNumberArea;
     private final JTextField fileNameLabel;
@@ -122,6 +125,7 @@ public class CodeAssessment {
                     if (e.getClickCount() == 2) {
                         insertCommentPhrase();
                         saveFile();
+                        paintLabels(currentFile.toPath(), commentPattern);
                     }
                 }
             }
@@ -130,11 +134,7 @@ public class CodeAssessment {
         readOnlyRadioButton.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == ItemEvent.SELECTED) {
-                    textArea.setEditable(false); // Set textArea to non-editable
-                } else {
-                    textArea.setEditable(true);
-                }
+                textArea.setEditable(e.getStateChange() != ItemEvent.SELECTED); // Set textArea to non-editable
             }
         });
 
@@ -153,7 +153,7 @@ public class CodeAssessment {
                 reader.close();
                 lineNumberArea.repaint();
                 findRefCode();
-                paintLabels(currentFile.toPath(), Pattern.compile("@grade"));
+                paintLabels(currentFile.toPath(), commentPattern);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -205,13 +205,12 @@ public class CodeAssessment {
             if (line.contains("ASSESSMENT") || line.contains("@grade") || line.contains("@feedback") || line.contains("*/")) {
                 if (line.contains("ASSESSMENT")) {
                     // Find the line number containing "ASSESSMENT"
-                    int assessmentLine = selectedRowIndex;
 
                     // Remove the next four lines
                     for (int i = 0; i < 4; i++) {
-                        if (assessmentLine < textArea.getLineCount()) {
-                            int currentLineStart = textArea.getLineStartOffset(assessmentLine);
-                            int currentLineEnd = textArea.getLineEndOffset(assessmentLine);
+                        if (selectedRowIndex < textArea.getLineCount()) {
+                            int currentLineStart = textArea.getLineStartOffset(selectedRowIndex);
+                            int currentLineEnd = textArea.getLineEndOffset(selectedRowIndex);
                             textArea.getDocument().remove(currentLineStart, currentLineEnd - currentLineStart);
                         }
                     }
@@ -242,7 +241,7 @@ public class CodeAssessment {
             File folder = currentFile.getParentFile();
             File[] files = folder.listFiles();
 
-            for (int i = 0; i < files.length; i++) {
+            for (int i = 0; i < Objects.requireNonNull(files).length; i++) {
                 if (files[i].equals(currentFile)) {
                     if (i < files.length - 1) {
                         currentFile = files[i + 1];
@@ -261,7 +260,7 @@ public class CodeAssessment {
             reader.close();
             fileNameLabel.setText(currentFile.getName());
             lineNumberArea.repaint();
-            paintLabels(currentFile.toPath(), Pattern.compile("@grade"));
+            paintLabels(currentFile.toPath(), commentPattern);
             //findRefCode();
         } catch (IOException e) {
             e.printStackTrace();
@@ -305,7 +304,7 @@ public class CodeAssessment {
             if (files != null) {
                 for (File file : files) {
                     if (file.isFile() && (file.getName().equals(refCodeJava) || file.getName().equals(refCodeCPP))) {
-                        commentCount = countComments(Path.of(file.getPath()), Pattern.compile("@grade"));
+                        commentCount = countComments(Path.of(file.getPath()), commentPattern);
                         commentCountField.setText("Number of Segments: " + commentCount);
                         break;
                     }
@@ -357,7 +356,7 @@ public class CodeAssessment {
         });
     }
 
-    class LineNumberArea extends JPanel {
+    static class LineNumberArea extends JPanel {
         private final JTextArea textArea;
 
         public LineNumberArea(JTextArea textArea) {
