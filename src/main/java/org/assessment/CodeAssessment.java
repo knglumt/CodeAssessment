@@ -10,24 +10,31 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import java.nio.charset.StandardCharsets;
 
+/**
+ * This class represents a Code Assessment tool with a graphical user interface (GUI).
+ */
 public class CodeAssessment {
 
     private final JFrame frame;
     private final JTextArea textArea;
     private final JFileChooser fileChooser;
     private final File defaultFolder;
-    int commentCount = 0;
+    int commentCount;
 
     Pattern commentPattern = Pattern.compile("@grade");
     private File currentFile;
     private final LineNumberArea lineNumberArea;
     private final JTextField fileNameLabel;
     private final JTextField commentCountField;
+    private final JTextField refCodeField;
     private final JRadioButton readOnlyRadioButton;
 
+    /**
+     * Constructor for the CodeAssessment class, sets up the GUI and initializes components.
+     */
     public CodeAssessment() {
-
         frame = new JFrame("Code Assessment");
         frame.setSize(800, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -54,6 +61,10 @@ public class CodeAssessment {
         commentCountField.setEditable(false);
         commentCountField.setFont(commentCountField.getFont().deriveFont(Font.BOLD));
 
+        refCodeField = new JTextField(30);
+        refCodeField.setEditable(true);
+        refCodeField.setText("RefCode.java");
+
         readOnlyRadioButton = new JRadioButton("Code Segmentation");
         JRadioButton editableRadioButton = new JRadioButton("Code Grading");
 
@@ -77,6 +88,7 @@ public class CodeAssessment {
 
         paramPanel.add(readOnlyRadioButton);
         paramPanel.add(editableRadioButton);
+        paramPanel.add(refCodeField);
         paramPanel.add(commentCountField);
 
         fileChooser = new JFileChooser();
@@ -121,7 +133,7 @@ public class CodeAssessment {
         textArea.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (readOnlyRadioButton.isSelected()){
+                if (readOnlyRadioButton.isSelected()) {
                     if (e.getClickCount() == 2) {
                         insertCommentPhrase();
                         saveFile();
@@ -134,13 +146,16 @@ public class CodeAssessment {
         readOnlyRadioButton.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
-                textArea.setEditable(e.getStateChange() != ItemEvent.SELECTED); // Set textArea to non-editable
+                textArea.setEditable(e.getStateChange() != ItemEvent.SELECTED);
             }
         });
 
         frame.setVisible(true);
     }
 
+    /**
+     * Opens a file selected by the user and displays its content in the JTextArea.
+     */
     private void openFile() {
         fileChooser.setCurrentDirectory(defaultFolder);
         int returnVal = fileChooser.showOpenDialog(frame);
@@ -160,7 +175,9 @@ public class CodeAssessment {
         }
     }
 
-
+    /**
+     * Saves the content of the current file in the JTextArea.
+     */
     private void saveFile() {
         if (currentFile == null) {
             fileChooser.setCurrentDirectory(defaultFolder);
@@ -173,7 +190,7 @@ public class CodeAssessment {
         }
 
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(currentFile));
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(currentFile), StandardCharsets.UTF_8));
             textArea.write(writer);
             writer.close();
         } catch (IOException e) {
@@ -181,6 +198,9 @@ public class CodeAssessment {
         }
     }
 
+    /**
+     * Saves the content of the current file in the JTextArea with a new name.
+     */
     private void saveFileAs() {
         if (currentFile != null) {
             try {
@@ -193,6 +213,9 @@ public class CodeAssessment {
         }
     }
 
+    /**
+     * Inserts a comment phrase into the code where the user double-clicked.
+     */
     private void insertCommentPhrase() {
         int caretPosition = textArea.getCaretPosition();
         try {
@@ -204,16 +227,29 @@ public class CodeAssessment {
 
             if (line.contains("ASSESSMENT") || line.contains("@grade") || line.contains("@feedback") || line.contains("*/")) {
                 if (line.contains("ASSESSMENT")) {
-                    // Find the line number containing "ASSESSMENT"
 
-                    // Remove the next four lines
-                    for (int i = 0; i < 4; i++) {
-                        if (selectedRowIndex < textArea.getLineCount()) {
-                            int currentLineStart = textArea.getLineStartOffset(selectedRowIndex);
-                            int currentLineEnd = textArea.getLineEndOffset(selectedRowIndex);
-                            textArea.getDocument().remove(currentLineStart, currentLineEnd - currentLineStart);
+                    int lineStartGrade = textArea.getLineStartOffset(selectedRowIndex + 1);
+                    int lineEndGrade = textArea.getLineEndOffset(selectedRowIndex + 1);
+                    String lineGrade = textArea.getText(lineStartGrade, lineEndGrade - lineStartGrade);
+                    boolean deleteComment = true;
+                    if (lineGrade.contains("@grade") && lineGrade.trim().length() > 8) {
+                        int response = JOptionPane.showConfirmDialog(null,
+                                "Grading has been done, deleted anyway?", "Confirmation", JOptionPane.YES_NO_OPTION);
+                        if (response == JOptionPane.NO_OPTION) {
+                            deleteComment = false;
                         }
                     }
+
+                    if (deleteComment) {
+                        for (int i = 0; i < 4; i++) {
+                            if (selectedRowIndex < textArea.getLineCount()) {
+                                int currentLineStart = textArea.getLineStartOffset(selectedRowIndex);
+                                int currentLineEnd = textArea.getLineEndOffset(selectedRowIndex);
+                                textArea.getDocument().remove(currentLineStart, currentLineEnd - currentLineStart);
+                            }
+                        }
+                    }
+
                 }
             } else {
                 // Insert a new JavaDoc comment
@@ -230,12 +266,17 @@ public class CodeAssessment {
         }
     }
 
-
+    /**
+     * Saves the current file and opens the next file in the same folder.
+     */
     private void saveAndOpenFile() {
         saveFile();
         openNextFileInFolder();
     }
 
+    /**
+     * Opens the next file in the same folder without a file dialog.
+     */
     private void openNextFileInFolder() {
         if (currentFile != null) {
             File folder = currentFile.getParentFile();
@@ -253,6 +294,9 @@ public class CodeAssessment {
         }
     }
 
+    /**
+     * Opens the next file in the same folder without a file dialog.
+     */
     private void openFileWithoutDialog() {
         try {
             BufferedReader reader = new BufferedReader(new FileReader(currentFile));
@@ -267,6 +311,9 @@ public class CodeAssessment {
         }
     }
 
+    /**
+     * Opens the previous file in the same folder without a file dialog.
+     */
     private void openPreviousFileInFolder() {
         if (currentFile != null) {
             File folder = currentFile.getParentFile();
@@ -284,17 +331,26 @@ public class CodeAssessment {
         }
     }
 
+    /**
+     * Reopens the current file.
+     */
     private void reopenFile() {
         if (currentFile != null) {
             openFileWithoutDialog();
         }
     }
 
+    /**
+     * Finds the reference code file and counts the number of comment phrases in it.
+     *
+     * @throws IOException If an error occurs while searching for the reference code or reading it.
+     */
     private void findRefCode() throws IOException {
 
         String folderPath = String.valueOf(currentFile.getParentFile());
-        String refCodeJava = "RefCode.java";
-        String refCodeCPP = "RefCode.cpp";
+        String refCode = refCodeField.getText();
+
+        commentCount = -1;
 
         File folder = new File(folderPath);
 
@@ -303,7 +359,7 @@ public class CodeAssessment {
 
             if (files != null) {
                 for (File file : files) {
-                    if (file.isFile() && (file.getName().equals(refCodeJava) || file.getName().equals(refCodeCPP))) {
+                    if (file.isFile() && (file.getName().equals(refCode))) {
                         commentCount = countComments(Path.of(file.getPath()), commentPattern);
                         commentCountField.setText("Number of Segments: " + commentCount);
                         break;
@@ -311,12 +367,19 @@ public class CodeAssessment {
                 }
             }
         }
-        if (commentCount == 0) {
-            JOptionPane.showMessageDialog(null, "RefCode.java or RefCode.cpp not found!");
-            //System.exit(0);
+        if (commentCount == -1) {
+            JOptionPane.showMessageDialog(null, refCodeField.getText() + " not found!");
+            commentCountField.setText("Number of Segments: Not found!");
         }
     }
 
+    /**
+     * Counts the number of comment phrases in a specified file.
+     *
+     * @param file          The file to count comment phrases in.
+     * @param commentPattern The regular expression pattern to match comment phrases.
+     * @return The number of comment phrases found in the file.
+     */
     private int countComments(Path file, Pattern commentPattern) {
         int commentCount = 0;
 
@@ -334,6 +397,12 @@ public class CodeAssessment {
         return commentCount;
     }
 
+    /**
+     * Paints labels with different colors based on the comparison of comment counts.
+     *
+     * @param file          The file to check comment counts for.
+     * @param commentPattern The regular expression pattern to match comment phrases.
+     */
     private void paintLabels(Path file, Pattern commentPattern) {
         int fileCommentCount = countComments(file, commentPattern);
         if (fileCommentCount != commentCount) {
@@ -347,7 +416,11 @@ public class CodeAssessment {
         }
     }
 
-
+    /**
+     * Main method to start the CodeAssessment application.
+     *
+     * @param args The command-line arguments.
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
@@ -356,6 +429,9 @@ public class CodeAssessment {
         });
     }
 
+    /**
+     * A nested class that represents the LineNumberArea for displaying line numbers.
+     */
     static class LineNumberArea extends JPanel {
         private final JTextArea textArea;
 
