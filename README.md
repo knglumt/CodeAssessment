@@ -16,7 +16,7 @@ Features
 
 - Open code files for assessment.
 - Insert comment phrases with grading and feedback information.
-- Save the code with inserted comments.
+- Auto-save the code with inserted comments.
 - Compare the comment count in the opened file with a reference code.
 - Navigate to the next and previous files in the same folder.
 - Display line numbers in the code view.
