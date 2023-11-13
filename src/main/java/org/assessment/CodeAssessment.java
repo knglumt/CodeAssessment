@@ -8,6 +8,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.nio.file.*;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.nio.charset.StandardCharsets;
@@ -358,9 +360,10 @@ public class CodeAssessment {
             File[] files = folder.listFiles();
 
             if (files != null) {
+                Arrays.sort(files, Comparator.comparing(File::getName));
                 for (File file : files) {
                     if (file.isFile() && (file.getName().equals(refCode))) {
-                        commentCount = countComments(Path.of(file.getPath()), commentPattern);
+                        commentCount = countComments(Paths.get((file.getPath())), commentPattern);
                         commentCountField.setText("Number of Segments: " + commentCount);
                         break;
                     }
