@@ -1,5 +1,8 @@
 // TODO: Export a xls file to list the grades
 // TODO: Show the comments, grades and feedbacks in different colors
-// TODO: Grade zeroes in an easier way
 // TODO: Add undo button
-// TODO: Open only code and txt files
+
+// DONE: Save a file when changed
+// DONE: Order the files on macOS properly
+// DONE: Double-clicked on @grade, add grade zero
+// DONE: Open only code and txt files

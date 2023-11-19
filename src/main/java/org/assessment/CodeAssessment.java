@@ -10,7 +10,6 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Objects;
 import java.util.regex.Pattern;
 import java.nio.charset.StandardCharsets;
 
@@ -234,7 +233,14 @@ public class CodeAssessment {
                     }
 
                 }
-            } else {
+                else if (line.contains("@grade")) {
+                    // Double-clicked on @grade, add grade zero
+                    String newLine = line.replace("@grade", "@grade 0");
+                    textArea.getDocument().remove(lineStart, lineEnd - lineStart);
+                    textArea.getDocument().insertString(lineStart, newLine, null);
+                }
+            }
+            else {
                 // Insert a new JavaDoc comment
                 String text = "/** ASSESSMENT\n";
                 text += " * @grade \n";
@@ -264,7 +270,7 @@ public class CodeAssessment {
     private void openNextFileInFolder() {
         if (currentFile != null) {
             File folder = currentFile.getParentFile();
-            File[] files = folder.listFiles();
+            File[] files = folder.listFiles(getAllFileTypesFilter());
 
             if (files != null) {
                 Arrays.sort(files, Comparator.comparing(File::getName));
@@ -288,7 +294,7 @@ public class CodeAssessment {
     private void openPreviousFileInFolder() {
         if (currentFile != null) {
             File folder = currentFile.getParentFile();
-            File[] files = folder.listFiles();
+            File[] files = folder.listFiles(getAllFileTypesFilter());
 
             if (files != null) {
                 Arrays.sort(files, Comparator.comparing(File::getName));
@@ -323,6 +329,23 @@ public class CodeAssessment {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Helper method to get a file filter for Java and text files.
+     */
+    private FileFilter getAllFileTypesFilter() {
+        return new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                return file.isDirectory() || file.getName().toLowerCase().endsWith(".java") || file.getName().toLowerCase().endsWith(".txt")
+                        || file.getName().toLowerCase().endsWith(".c") || file.getName().toLowerCase().endsWith(".cpp")
+                        || file.getName().toLowerCase().endsWith(".py")
+                        // Add more file extensions as needed for other programming languages
+                        ;
+            }
+        };
+    }
+
 
     /**
      * Finds the reference code file and counts the number of comment phrases in it.
