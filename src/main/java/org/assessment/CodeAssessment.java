@@ -23,6 +23,7 @@ public class CodeAssessment {
     private final JTextArea textArea;
     private final JFileChooser fileChooser;
     private final File defaultFolder;
+    private boolean unsavedChanges = false;
     int commentCount;
 
     Pattern commentPattern = Pattern.compile("@grade");
@@ -76,9 +77,7 @@ public class CodeAssessment {
         radioButtonGroup.setSelected(readOnlyRadioButton.getModel(), true);
 
         JButton openButton = new JButton("Open");
-        JButton reopenButton = new JButton("Reopen");
         JButton saveAndOpenButton = new JButton("Next >>");
-        JButton saveAsButton = new JButton("Save");
         JButton previousButton = new JButton("<< Previous");
 
         buttonPanel.add(openButton);
@@ -110,20 +109,6 @@ public class CodeAssessment {
             }
         });
 
-        saveAsButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                saveFileAs();
-            }
-        });
-
-        reopenButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                reopenFile();
-            }
-        });
-
         previousButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -144,6 +129,14 @@ public class CodeAssessment {
                 }
             }
         });
+
+        textArea.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                unsavedChanges = true;
+            }
+        });
+
 
         readOnlyRadioButton.addItemListener(new ItemListener() {
             @Override
@@ -181,37 +174,25 @@ public class CodeAssessment {
      * Saves the content of the current file in the JTextArea.
      */
     private void saveFile() {
-        if (currentFile == null) {
-            fileChooser.setCurrentDirectory(defaultFolder);
-            int returnVal = fileChooser.showSaveDialog(frame);
-            if (returnVal == JFileChooser.APPROVE_OPTION) {
-                currentFile = fileChooser.getSelectedFile();
-            } else {
-                return;
+        if (unsavedChanges) {
+            if (currentFile == null) {
+                fileChooser.setCurrentDirectory(defaultFolder);
+                int returnVal = fileChooser.showSaveDialog(frame);
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+                    currentFile = fileChooser.getSelectedFile();
+                } else {
+                    return;
+                }
             }
-        }
 
-        try {
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(currentFile), StandardCharsets.UTF_8));
-            textArea.write(writer);
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Saves the content of the current file in the JTextArea with a new name.
-     */
-    private void saveFileAs() {
-        if (currentFile != null) {
             try {
-                BufferedWriter writer = new BufferedWriter(new FileWriter(currentFile));
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(currentFile), StandardCharsets.UTF_8));
                 textArea.write(writer);
                 writer.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            unsavedChanges = false;
         }
     }
 
@@ -262,7 +243,8 @@ public class CodeAssessment {
                 textArea.getDocument().insertString(lineStart, text, null);
             }
             lineNumberArea.repaint();
-            saveFile(); // Save the file after removing the comment
+            unsavedChanges = true;
+            saveFile();
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
@@ -284,17 +266,46 @@ public class CodeAssessment {
             File folder = currentFile.getParentFile();
             File[] files = folder.listFiles();
 
-            for (int i = 0; i < Objects.requireNonNull(files).length; i++) {
-                if (files[i].equals(currentFile)) {
-                    if (i < files.length - 1) {
-                        currentFile = files[i + 1];
-                        openFileWithoutDialog();
+            if (files != null) {
+                Arrays.sort(files, Comparator.comparing(File::getName));
+
+                for (int i = 0; i < files.length; i++) {
+                    if (files[i].equals(currentFile)) {
+                        if (i < files.length - 1) {
+                            currentFile = files[i + 1];
+                            openFileWithoutDialog();
+                        }
+                        break;
                     }
-                    break;
                 }
             }
         }
     }
+
+    /**
+     * Opens the previous file in the same folder without a file dialog.
+     */
+    private void openPreviousFileInFolder() {
+        if (currentFile != null) {
+            File folder = currentFile.getParentFile();
+            File[] files = folder.listFiles();
+
+            if (files != null) {
+                Arrays.sort(files, Comparator.comparing(File::getName));
+
+                for (int i = 0; i < files.length; i++) {
+                    if (files[i].equals(currentFile)) {
+                        if (i > 0) {
+                            currentFile = files[i - 1];
+                            openFileWithoutDialog();
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
 
     /**
      * Opens the next file in the same folder without a file dialog.
@@ -310,35 +321,6 @@ public class CodeAssessment {
             //findRefCode();
         } catch (IOException e) {
             e.printStackTrace();
-        }
-    }
-
-    /**
-     * Opens the previous file in the same folder without a file dialog.
-     */
-    private void openPreviousFileInFolder() {
-        if (currentFile != null) {
-            File folder = currentFile.getParentFile();
-            File[] files = folder.listFiles();
-
-            for (int i = 0; i < files.length; i++) {
-                if (files[i].equals(currentFile)) {
-                    if (i > 0) {
-                        currentFile = files[i - 1];
-                        openFileWithoutDialog();
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    /**
-     * Reopens the current file.
-     */
-    private void reopenFile() {
-        if (currentFile != null) {
-            openFileWithoutDialog();
         }
     }
 
@@ -472,6 +454,7 @@ public class CodeAssessment {
                 int y = i * fontHeight + baseline;
                 g.drawString(String.valueOf(i + 1), 5, y);
             }
+            textArea.repaint();
         }
     }
 }
