@@ -8,8 +8,12 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.nio.file.*;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.nio.charset.StandardCharsets;
 
@@ -32,6 +36,7 @@ public class CodeAssessment {
     private final JTextField commentCountField;
     private final JTextField refCodeField;
     private final JRadioButton readOnlyRadioButton;
+    private boolean hasTextAfterGrade;
 
     /**
      * Constructor for the CodeAssessment class, sets up the GUI and initializes components.
@@ -78,10 +83,12 @@ public class CodeAssessment {
         JButton openButton = new JButton("Open");
         JButton saveAndOpenButton = new JButton("Next >>");
         JButton previousButton = new JButton("<< Previous");
+        JButton exportCSVButton = new JButton("Export CSV");
 
         buttonPanel.add(openButton);
         buttonPanel.add(previousButton);
         buttonPanel.add(saveAndOpenButton);
+        buttonPanel.add(exportCSVButton);
         buttonPanel.add(fileNameLabel);
         buttonPanel.add(commentCountField);
         buttonPanel.add(fileNameLabel);
@@ -132,7 +139,9 @@ public class CodeAssessment {
         textArea.addKeyListener(new KeyAdapter() {
             @Override
             public void keyTyped(KeyEvent e) {
+
                 unsavedChanges = true;
+                paintLabels(currentFile.toPath(), commentPattern);
             }
         });
 
@@ -143,6 +152,14 @@ public class CodeAssessment {
                 textArea.setEditable(e.getStateChange() != ItemEvent.SELECTED);
             }
         });
+
+        exportCSVButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                exportCSV();
+            }
+        });
+
 
         frame.setVisible(true);
     }
@@ -331,6 +348,35 @@ public class CodeAssessment {
     }
 
     /**
+     * Counts the number of comment phrases in a specified file.
+     *
+     * @param file          The file to count comment phrases in.
+     * @param commentPattern The regular expression pattern to match comment phrases.
+     * @return The number of comment phrases found in the file.
+     */
+    private int countComments(Path file, Pattern commentPattern) {
+        int commentCount = 0;
+        hasTextAfterGrade = true;
+        try (BufferedReader reader = new BufferedReader(new FileReader(file.toFile()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                Matcher matcher = commentPattern.matcher(line);
+                if (matcher.find()) {
+                    commentCount++;
+                    int commentIndex = matcher.end();
+                    if (commentIndex >= line.length() - 1) {
+                        hasTextAfterGrade = false;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return commentCount;
+    }
+
+    /**
      * Helper method to get a file filter for Java and text files.
      */
     private FileFilter getAllFileTypesFilter() {
@@ -382,30 +428,6 @@ public class CodeAssessment {
     }
 
     /**
-     * Counts the number of comment phrases in a specified file.
-     *
-     * @param file          The file to count comment phrases in.
-     * @param commentPattern The regular expression pattern to match comment phrases.
-     * @return The number of comment phrases found in the file.
-     */
-    private int countComments(Path file, Pattern commentPattern) {
-        int commentCount = 0;
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(file.toFile()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (commentPattern.matcher(line).find()) {
-                    commentCount++;
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return commentCount;
-    }
-
-    /**
      * Paints labels with different colors based on the comparison of comment counts.
      *
      * @param file          The file to check comment counts for.
@@ -414,14 +436,33 @@ public class CodeAssessment {
     private void paintLabels(Path file, Pattern commentPattern) {
         int fileCommentCount = countComments(file, commentPattern);
         if (fileCommentCount != commentCount) {
-            // Set the text color of fileNameLabel and commentCountField to red
             fileNameLabel.setForeground(Color.RED);
             commentCountField.setForeground(Color.RED);
         } else {
             // Reset the text color to the default
-            fileNameLabel.setForeground(Color.GREEN);
-            commentCountField.setForeground(Color.GREEN);
+            fileNameLabel.setForeground(Color.BLUE);
+            commentCountField.setForeground(Color.BLUE);
+            if (hasTextAfterGrade) {
+                fileNameLabel.setForeground(Color.GREEN);
+                commentCountField.setForeground(Color.GREEN);
+            }
         }
+    }
+
+    /**
+     * Invokes the CSVExporter to export CSV based on the current working directory.
+     */
+    private void exportCSV() {
+
+        CSVExporter csvExporter = new CSVExporter();
+        String rootFolder = System.getProperty("user.dir");
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String outputCsv = "Grades_" + timeStamp + ".csv";
+
+        Map<String, Map<String, Integer>> results = csvExporter.processFolder(rootFolder);
+        csvExporter.generateCsv(results, outputCsv);
+
+        JOptionPane.showMessageDialog(null, "CSV file generated successfully!");
     }
 
     /**
