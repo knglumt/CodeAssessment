@@ -37,6 +37,7 @@ public class CodeAssessment {
     private final JTextField refCodeField;
     private final JRadioButton readOnlyRadioButton;
     private boolean hasTextAfterGrade;
+    private int currentLineCount;
 
     /**
      * Constructor for the CodeAssessment class, sets up the GUI and initializes components.
@@ -177,6 +178,7 @@ public class CodeAssessment {
                 BufferedReader reader = new BufferedReader(new FileReader(currentFile));
                 textArea.read(reader, null);
                 reader.close();
+                currentLineCount = textArea.getLineCount();
                 lineNumberArea.repaint();
                 findRefCode();
                 paintLabels(currentFile.toPath(), commentPattern);
@@ -190,6 +192,9 @@ public class CodeAssessment {
      * Saves the content of the current file in the JTextArea.
      */
     private void saveFile() {
+        if (currentLineCount != textArea.getLineCount() ) {
+            unsavedChanges = true;
+        }
         if (unsavedChanges) {
             if (currentFile == null) {
                 fileChooser.setCurrentDirectory(defaultFolder);
@@ -339,6 +344,7 @@ public class CodeAssessment {
             textArea.read(reader, null);
             reader.close();
             fileNameLabel.setText(currentFile.getName());
+            currentLineCount = textArea.getLineCount();
             lineNumberArea.repaint();
             paintLabels(currentFile.toPath(), commentPattern);
             //findRefCode();

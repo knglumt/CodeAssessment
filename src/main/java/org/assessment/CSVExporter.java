@@ -3,6 +3,8 @@ package org.assessment;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * The CSVExporter class provides methods for processing folders, extracting grades, and generating a CSV file.
@@ -32,12 +34,13 @@ public class CSVExporter {
 
                     try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                         String line;
+                        int sum = 0;
                         while ((line = reader.readLine()) != null) {
                             if (line.contains("@grade")) {
-                                int sum = extractAndSumGrades(line);
-                                studentGrades.put(studentId, sum);
+                                sum += extractAndSumGrades(line);
                             }
                         }
+                        studentGrades.put(studentId, sum);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -94,17 +97,24 @@ public class CSVExporter {
             }
             writer.println("Grade");
 
-            for (String studentId : results.values().iterator().next().keySet()) {
+            Set<String> allStudentIds = results.values().stream()
+                    .flatMap(folderGrades -> folderGrades.keySet().stream())
+                    .collect(Collectors.toSet());
+
+            for (String studentId : allStudentIds) {
                 writer.print(studentId + ",");
 
                 int totalGrade = 0;
                 for (Map.Entry<String, Map<String, Integer>> entry : results.entrySet()) {
-                    int grade = entry.getValue().getOrDefault(studentId, 0);
+                    Map<String, Integer> folderGrades = entry.getValue();
+                    int grade = folderGrades.getOrDefault(studentId, 0);
                     writer.print(grade + ",");
                     totalGrade += grade;
                 }
                 writer.println(totalGrade);
             }
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }
