@@ -9,10 +9,7 @@ import java.awt.event.*;
 import java.io.*;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +21,7 @@ public class CodeAssessment {
 
     private final JFrame frame;
     private final JTextArea textArea;
+    private Stack<String> contentStack = new Stack<>();
     private final JFileChooser fileChooser;
     private final File defaultFolder;
     private boolean unsavedChanges = false;
@@ -85,11 +83,13 @@ public class CodeAssessment {
         JButton saveAndOpenButton = new JButton("Next >>");
         JButton previousButton = new JButton("<< Previous");
         JButton exportCSVButton = new JButton("Export CSV");
+        JButton mailButton = new JButton("Send Mail");
 
         buttonPanel.add(openButton);
         buttonPanel.add(previousButton);
         buttonPanel.add(saveAndOpenButton);
         buttonPanel.add(exportCSVButton);
+        buttonPanel.add(mailButton);
         buttonPanel.add(fileNameLabel);
         buttonPanel.add(commentCountField);
         buttonPanel.add(fileNameLabel);
@@ -139,13 +139,19 @@ public class CodeAssessment {
 
         textArea.addKeyListener(new KeyAdapter() {
             @Override
-            public void keyTyped(KeyEvent e) {
+            public void keyReleased(KeyEvent e) {
 
                 unsavedChanges = true;
+
+                if ((e.getKeyCode() == KeyEvent.VK_Z) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                        undo();
+                }
+                else
+                    contentStack.push(textArea.getText());
+
                 paintLabels(currentFile.toPath(), commentPattern);
             }
         });
-
 
         readOnlyRadioButton.addItemListener(new ItemListener() {
             @Override
@@ -161,8 +167,28 @@ public class CodeAssessment {
             }
         });
 
+        mailButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                sendMail();
+            }
+        });
+
 
         frame.setVisible(true);
+    }
+
+    private void sendMail() {
+        int response = JOptionPane.showConfirmDialog(null,
+                "Are you sure to email assessment details to all students?", "Confirmation", JOptionPane.YES_NO_OPTION);
+        if (response == JOptionPane.YES_OPTION) {
+            EmailSender program = new EmailSender(
+                    "student_mails.txt",
+                    defaultFolder.getPath(),
+                    "app_config.txt"
+            );
+            program.run();
+        }
     }
 
     /**
@@ -182,6 +208,7 @@ public class CodeAssessment {
                 lineNumberArea.repaint();
                 findRefCode();
                 paintLabels(currentFile.toPath(), commentPattern);
+                contentStack.push(textArea.getText());
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -334,6 +361,16 @@ public class CodeAssessment {
         }
     }
 
+    private void undo() {
+        if (!contentStack.isEmpty()) {
+            String previousContent = contentStack.pop();
+            textArea.setText(previousContent);
+            lineNumberArea.repaint();
+            unsavedChanges = true;
+        }
+    }
+
+
 
     /**
      * Opens the next file in the same folder without a file dialog.
@@ -347,6 +384,7 @@ public class CodeAssessment {
             currentLineCount = textArea.getLineCount();
             lineNumberArea.repaint();
             paintLabels(currentFile.toPath(), commentPattern);
+            contentStack.push(textArea.getText());
             //findRefCode();
         } catch (IOException e) {
             e.printStackTrace();
@@ -465,7 +503,7 @@ public class CodeAssessment {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String outputCsv = "Grades_" + timeStamp + ".csv";
 
-        Map<String, Map<String, Integer>> results = csvExporter.processFolder(rootFolder);
+        Map<String, Map<String, Map<String, Integer>>> results = csvExporter.processFolder(rootFolder);
         csvExporter.generateCsv(results, outputCsv);
 
         JOptionPane.showMessageDialog(null, "CSV file generated successfully!");
@@ -477,11 +515,12 @@ public class CodeAssessment {
      * @param args The command-line arguments.
      */
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new CodeAssessment();
-            }
-        });
+
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    new CodeAssessment();
+                }
+            });
     }
 
     /**

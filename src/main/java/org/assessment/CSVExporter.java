@@ -1,9 +1,7 @@
 package org.assessment;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -17,8 +15,8 @@ public class CSVExporter {
      * @param rootFolder The root folder to process.
      * @return A map containing subfolder names as keys and a map of student IDs and their total grades as values.
      */
-    static Map<String, Map<String, Integer>> processFolder(String rootFolder) {
-        Map<String, Map<String, Integer>> results = new HashMap<>();
+    static Map<String, Map<String, Map<String, Integer>>> processFolder(String rootFolder) {
+        Map<String, Map<String, Map<String, Integer>>> results = new HashMap<>();
 
         File folder = new File(rootFolder);
         File[] subfolders = folder.listFiles(File::isDirectory);
@@ -26,7 +24,7 @@ public class CSVExporter {
         if (subfolders != null) {
             for (File subfolder : subfolders) {
                 String folderName = subfolder.getName();
-                Map<String, Integer> studentGrades = new HashMap<>();
+                Map<String, Map<String, Integer>> studentData = new HashMap<>();
 
                 for (File file : subfolder.listFiles(File::isFile)) {
                     String fileName = file.getName();
@@ -35,23 +33,34 @@ public class CSVExporter {
                     try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                         String line;
                         int sum = 0;
+                        int score = 0;
+                        Map<String, Integer> individualScores = new HashMap<>();
+
+                        int section = 1;
                         while ((line = reader.readLine()) != null) {
                             if (line.contains("@grade")) {
-                                sum += extractAndSumGrades(line);
+                                score = extractAndSumGrades(line);
+                                sum += score;
+                                individualScores.put("Score" + section, score);
+                                section++;
                             }
                         }
-                        studentGrades.put(studentId, sum);
+
+                        individualScores.put("Total", sum);
+                        studentData.put(studentId, individualScores);
+
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
 
-                results.put(folderName, studentGrades);
+                results.put(folderName, studentData);
             }
         }
 
         return results;
     }
+
 
     /**
      * Extracts the student ID from a given file name.
@@ -89,31 +98,45 @@ public class CSVExporter {
      * @param results   The processed data containing subfolder names and student grades.
      * @param outputCsv The path to the output CSV file.
      */
-    static void generateCsv(Map<String, Map<String, Integer>> results, String outputCsv) {
+    static void generateCsv(Map<String, Map<String, Map<String, Integer>>> results, String outputCsv) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputCsv))) {
+
             writer.print("Student ID,");
             for (String folderName : results.keySet()) {
                 writer.print(folderName + ",");
+                writer.print(folderName + " Scores,");
             }
-            writer.println("Grade");
+            writer.println("Total Grade");
 
             Set<String> allStudentIds = results.values().stream()
-                    .flatMap(folderGrades -> folderGrades.keySet().stream())
+                    .flatMap(folderData -> folderData.keySet().stream())
                     .collect(Collectors.toSet());
 
             for (String studentId : allStudentIds) {
                 writer.print(studentId + ",");
 
                 int totalGrade = 0;
-                for (Map.Entry<String, Map<String, Integer>> entry : results.entrySet()) {
-                    Map<String, Integer> folderGrades = entry.getValue();
-                    int grade = folderGrades.getOrDefault(studentId, 0);
+                for (Map.Entry<String, Map<String, Map<String, Integer>>> entry : results.entrySet()) {
+                    Map<String, Map<String, Integer>> folderData = entry.getValue();
+                    Map<String, Integer> studentData = folderData.getOrDefault(studentId, new HashMap<>());
+                    int grade = studentData.getOrDefault("Total", 0);
                     writer.print(grade + ",");
+
+                    boolean scoreValues = false;
+                    for (Map.Entry<String, Integer> scoreEntry : studentData.entrySet()) {
+                        if (scoreEntry.getKey().startsWith("Score")){
+                            writer.print(scoreEntry.getValue() + " ");
+                            scoreValues = true;
+                        }
+                    }
+
+                    if (!scoreValues) writer.print("0");
+                    writer.print(",");
+
                     totalGrade += grade;
                 }
                 writer.println(totalGrade);
             }
-
 
         } catch (IOException e) {
             e.printStackTrace();
