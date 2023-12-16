@@ -33,8 +33,6 @@ public class EmailSender {
 
     /**
      * Main method to execute the file consolidation and email sending process.
-     *
-     * @param args Command-line arguments (not used in this program)
      */
     public void run() {
         List<String[]> studentData = readStudentData();
@@ -129,7 +127,7 @@ public class EmailSender {
      *
      * @param studentId         The ID of the student
      * @param email             The email address of the student
-     * @param files             A list of file paths to include in the email
+     * @param consolidatedFiles A list of file paths to include in the email
      */
     private void sendEmailWithConsolidatedContent(String studentId, String email, Map<String, StringBuilder> consolidatedFiles) {
         String[] emailConfig = readEmailConfig();
