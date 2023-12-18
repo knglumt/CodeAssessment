@@ -143,13 +143,14 @@ public class CodeAssessment {
 
                 unsavedChanges = true;
 
-                if ((e.getKeyCode() == KeyEvent.VK_Z) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
-                        undo();
+                if (((e.getKeyCode() == KeyEvent.VK_Z) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0))
+                        || ((e.getKeyCode() == KeyEvent.VK_Z) && ((e.getModifiers() & KeyEvent.META_MASK) != 0))) {
+                    undo();
                 }
-                else
+                else if (!(((e.getModifiers() & KeyEvent.META_MASK) != 0) || ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0))) {
                     contentStack.push(textArea.getText());
-
-                paintLabels(currentFile.toPath(), commentPattern);
+                    paintLabels(currentFile.toPath(), commentPattern);
+                }
             }
         });
 
@@ -208,6 +209,7 @@ public class CodeAssessment {
                 lineNumberArea.repaint();
                 findRefCode();
                 paintLabels(currentFile.toPath(), commentPattern);
+                contentStack.clear();
                 contentStack.push(textArea.getText());
             } catch (IOException e) {
                 e.printStackTrace();
@@ -384,6 +386,7 @@ public class CodeAssessment {
             currentLineCount = textArea.getLineCount();
             lineNumberArea.repaint();
             paintLabels(currentFile.toPath(), commentPattern);
+            contentStack.clear();
             contentStack.push(textArea.getText());
             //findRefCode();
         } catch (IOException e) {
