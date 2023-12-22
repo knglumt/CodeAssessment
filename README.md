@@ -1,59 +1,74 @@
-Code Assessment Tool README
+# Code Assessment Tool
 
-The Code Assessment Tool is a Java application with a graphical user interface (GUI) designed to facilitate code assessment tasks. This tool allows users to open, assess, and manage code files, insert comment phrases, and compare code to a reference code file.
+## Overview
 
-Table of Contents
+The Code Assessment Tool is a Java application with a graphical user interface (GUI) designed for assessing and grading code files. This tool provides a set of features to facilitate code evaluation, navigation, and result management.
 
-- Features
-- Getting Started
-  - Prerequisites
-  - Installation
-- Usage
-- Contributing
-- License
+## Features
 
-Features
+### 1. Graphical User Interface (GUI)
 
-- Open code files for assessment.
-- Insert comment phrases with grading and feedback information.
-- Auto-save the code with inserted comments.
-- Compare the comment count in the opened file with a reference code.
-- Navigate to the next and previous files in the same folder.
-- Display line numbers in the code view.
-- User-friendly GUI for code assessment tasks.
+- The application is built using Swing, providing an intuitive GUI for users.
+- The main window (`JFrame`) contains a text area (`JTextArea`) for displaying and editing code, accompanied by a line number area for easier navigation.
+- Various buttons, radio buttons, and text fields are provided for user interaction.
 
-Getting Started
+### 2. File Operations
 
-Prerequisites
+- **Open File:**
+    - Users can open code files using a file chooser.
+    - The application keeps track of the current file, displaying its content in the text area.
 
-- Java Development Kit (JDK) 17 installed on your system.
+- **Save and Open Next:**
+    - Users can save the changes made to the current file and automatically open the next file in the same folder.
 
-Installation
+- **Previous File:**
+    - Users can navigate to the previous file in the same folder.
 
-1. Clone the repository to your local machine:
+### 3. Code Grading
 
-   git clone https://github.com/knglumt/CodeAssessment.git
+- **Comment Phrases:**
+    - Users can double-click to insert comment phrases related to assessment and grading.
+    - The tool counts the number of comment phrases in the code for grading purposes.
 
-2. Compile the code:
+- **Modes:**
+    - The application supports both read-only and editable modes, allowing users to choose the appropriate mode for their tasks.
 
-   javac org/assessment/CodeAssessment.java
+### 4. Undo Feature
 
-3. Run the application:
+- Users can undo changes using the Ctrl+Z shortcut, reverting the text area to its previous state.
 
-   java -jar CodeAssessment.jar
+### 5. CSV Export
 
-Usage
+- The application can export assessment results to a CSV file.
+- It uses a `CSVExporter` class for processing folders and generating CSV files based on the current working directory.
 
-1. Launch the application following the installation instructions.
-2. Click the "Open" button to open a code file for assessment.
-3. Use the double-click feature to insert comment phrases with grading and feedback information.
-4. Use "Next" and "Previous" buttons to navigate between code files in the same folder.
-5. The tool will compare the comment count in the opened file with a reference code and display differences in label colors.
+### 6. Email Sending
 
-Contributing
+- Users can send assessment details to all students via email.
+- The tool uses the `EmailSender` class to accomplish this task.
 
-Contributions to this project are welcome. If you find any issues or have suggestions for improvements, please create a GitHub issue and submit a pull request.
+## Getting Started
 
-License
+To run the Code Assessment Tool, follow these steps:
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+1. Ensure you have Java installed on your system.
+2. Compile the Java file: `javac CodeAssessment.java`.
+3. Run the application: `java CodeAssessment` or `java -jar CodeAssessment.jar`.
+
+## Usage
+
+- Open a code file using the "Open" button.
+- Navigate through files using the "Next," "Previous," and "Save and Open Next" buttons.
+- Edit code in either read-only or editable mode.
+- Double-click to insert comment phrases related to assessment and grading.
+- Utilize the undo feature with Ctrl+Z.
+- Export assessment results to a CSV file using the "Export CSV" button.
+- Send assessment details via email using the "Send Mails" button.
+
+## Contributing
+
+Contributions to the Code Assessment Tool are welcome. Feel free to open issues, submit feature requests, or contribute to the codebase.
+
+## License
+
+This Code Assessment Tool is licensed under the [MIT License](LICENSE). Feel free to use, modify, and distribute the code according to the terms of the license.

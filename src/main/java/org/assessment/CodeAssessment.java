@@ -83,7 +83,7 @@ public class CodeAssessment {
         JButton saveAndOpenButton = new JButton("Next >>");
         JButton previousButton = new JButton("<< Previous");
         JButton exportCSVButton = new JButton("Export CSV");
-        JButton mailButton = new JButton("Send Mail");
+        JButton mailButton = new JButton("Send Mails");
 
         buttonPanel.add(openButton);
         buttonPanel.add(previousButton);
