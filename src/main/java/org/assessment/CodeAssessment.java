@@ -743,6 +743,7 @@ public class CodeAssessment {
                     g.setColor(Color.RED);
                     g.setFont(g.getFont().deriveFont(Font.BOLD));
                 } else if ((fileCommentCount < 1 ) && (lists != null) && (lists.get(0).contains(i))) {
+                    g.setColor(Color.RED);
                     g.setFont(g.getFont().deriveFont(Font.BOLD));
                 } else {
                     g.setColor(Color.BLACK);
