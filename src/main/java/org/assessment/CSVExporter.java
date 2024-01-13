@@ -85,7 +85,10 @@ public class CSVExporter {
 
         for (String grade : grades) {
             if (!grade.isEmpty()) {
-                sum += Integer.parseInt(grade);
+                if (line.contains("-"))
+                    sum -= Integer.parseInt(grade);
+                else
+                    sum += Integer.parseInt(grade);
             }
         }
 

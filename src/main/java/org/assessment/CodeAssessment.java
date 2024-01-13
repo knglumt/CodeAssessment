@@ -4,6 +4,8 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.*;
 import javax.swing.text.*;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
@@ -13,6 +15,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.nio.charset.StandardCharsets;
+
+
 
 /**
  * This class represents a Code Assessment tool with a graphical user interface (GUI).
@@ -25,17 +29,24 @@ public class CodeAssessment {
     private final JFileChooser fileChooser;
     private final File defaultFolder;
     private boolean unsavedChanges = false;
-    int commentCount;
+    private int commentCount;
+    private static int fileCommentCount;
 
     Pattern commentPattern = Pattern.compile("@grade");
-    private File currentFile;
+
+    private static String refCodeFile;
+    private static File currentFile;
     private final LineNumberArea lineNumberArea;
     private final JTextField fileNameLabel;
     private final JTextField commentCountField;
     private final JTextField refCodeField;
     private final JRadioButton readOnlyRadioButton;
-    private boolean hasTextAfterGrade;
+    private static boolean hasTextAfterGrade;
     private int currentLineCount;
+
+    private int startIndexofAssesment;
+    private FeedbackTree feedbackTree;
+    private final JTree commentsTree;
 
     /**
      * Constructor for the CodeAssessment class, sets up the GUI and initializes components.
@@ -58,6 +69,13 @@ public class CodeAssessment {
         JPanel paramPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         frame.add(paramPanel, BorderLayout.SOUTH);
 
+        JPanel feedbackPanel = new JPanel(new BorderLayout());
+        frame.add(feedbackPanel, BorderLayout.EAST);
+
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(textArea), feedbackPanel);
+        splitPane.setResizeWeight(1.0);
+        frame.add(splitPane, BorderLayout.CENTER);
+
         fileNameLabel = new JTextField(30);
         fileNameLabel.setEditable(false);
         fileNameLabel.setFont(fileNameLabel.getFont().deriveFont(Font.BOLD));
@@ -69,7 +87,7 @@ public class CodeAssessment {
 
         refCodeField = new JTextField(30);
         refCodeField.setEditable(true);
-        refCodeField.setText("RefCode.java");
+        refCodeField.setText("RefCode");
 
         readOnlyRadioButton = new JRadioButton("Code Segmentation");
         JRadioButton editableRadioButton = new JRadioButton("Code Grading");
@@ -85,6 +103,9 @@ public class CodeAssessment {
         JButton exportCSVButton = new JButton("Export CSV");
         JButton mailButton = new JButton("Send Mails");
 
+        commentsTree = new JTree();
+        commentsTree.setVisible(false);
+
         buttonPanel.add(openButton);
         buttonPanel.add(previousButton);
         buttonPanel.add(saveAndOpenButton);
@@ -99,8 +120,12 @@ public class CodeAssessment {
         paramPanel.add(refCodeField);
         paramPanel.add(commentCountField);
 
+        feedbackPanel.add(new JScrollPane(commentsTree), BorderLayout.CENTER);
+
         fileChooser = new JFileChooser();
         defaultFolder = new File(System.getProperty("user.dir"));
+
+        createTreeViewPopupMenu();
 
         openButton.addActionListener(new ActionListener() {
             @Override
@@ -127,11 +152,15 @@ public class CodeAssessment {
         textArea.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (readOnlyRadioButton.isSelected()) {
-                    if (e.getClickCount() == 2) {
+                int offset = textArea.viewToModel(e.getPoint());
+                if (e.getClickCount() == 2) {
+                    if (readOnlyRadioButton.isSelected()) {
                         insertCommentPhrase();
                         saveFile();
                         paintLabels(currentFile.toPath(), commentPattern);
+                    } else {
+                        commentsTree.setModel(feedbackTree.buildTreeModel(findAssessmentOrderNumber(offset)).getModel());
+                        commentsTree.repaint();
                     }
                 }
             }
@@ -168,6 +197,17 @@ public class CodeAssessment {
             }
         });
 
+        commentsTree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // ...
+                if (editableRadioButton.isSelected() && SwingUtilities.isRightMouseButton(e)) {
+                    commentsTree.setSelectionPath(commentsTree.getPathForLocation(e.getX(), e.getY()));
+                    commentsTree.getComponentPopupMenu().show(commentsTree, e.getX(), e.getY());
+                }
+            }
+            // ...
+        });
         mailButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -180,15 +220,19 @@ public class CodeAssessment {
     }
 
     private void sendMail() {
-        int response = JOptionPane.showConfirmDialog(null,
-                "Are you sure to email assessment details to all students?", "Confirmation", JOptionPane.YES_NO_OPTION);
-        if (response == JOptionPane.YES_OPTION) {
-            EmailSender program = new EmailSender(
-                    "student_mails.txt",
-                    defaultFolder.getPath(),
-                    "app_config.txt"
-            );
-            program.run();
+
+        String subject = JOptionPane.showInputDialog(null, "Enter the exam name:", "Email Subject", JOptionPane.QUESTION_MESSAGE );
+        if (subject != null && !subject.trim().isEmpty()) {
+            int response = JOptionPane.showConfirmDialog(null,
+                    "Are you sure to email assessment details to all students?", "Confirmation", JOptionPane.YES_NO_OPTION);
+            if (response == JOptionPane.YES_OPTION) {
+                EmailSender program = new EmailSender(
+                        "student_mails.txt",
+                        defaultFolder.getPath(),
+                        "app_config.txt"
+                );
+                program.run(subject);
+            }
         }
     }
 
@@ -239,6 +283,7 @@ public class CodeAssessment {
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(currentFile), StandardCharsets.UTF_8));
                 textArea.write(writer);
                 writer.close();
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -426,7 +471,7 @@ public class CodeAssessment {
     /**
      * Helper method to get a file filter for Java and text files.
      */
-    private FileFilter getAllFileTypesFilter() {
+    public static FileFilter getAllFileTypesFilter() {
         return new FileFilter() {
             @Override
             public boolean accept(File file) {
@@ -460,7 +505,8 @@ public class CodeAssessment {
             if (files != null) {
                 Arrays.sort(files, Comparator.comparing(File::getName));
                 for (File file : files) {
-                    if (file.isFile() && (file.getName().equals(refCode))) {
+                    if (file.isFile() && (file.getName().contains(refCode))) {
+                        refCodeFile = file.getPath();
                         commentCount = countComments(Paths.get((file.getPath())), commentPattern);
                         commentCountField.setText("Number of Segments: " + commentCount);
                         break;
@@ -471,7 +517,13 @@ public class CodeAssessment {
         if (commentCount == -1) {
             JOptionPane.showMessageDialog(null, refCodeField.getText() + " not found!");
             commentCountField.setText("Number of Segments: Not found!");
+        } else {
+            feedbackTree = new FeedbackTree(folderPath);
+            commentsTree.setModel(feedbackTree.buildTreeModel(findAssessmentOrderNumber(0)).getModel());
+            commentsTree.repaint();
+            commentsTree.setVisible(true);
         }
+
     }
 
     /**
@@ -481,12 +533,11 @@ public class CodeAssessment {
      * @param commentPattern The regular expression pattern to match comment phrases.
      */
     private void paintLabels(Path file, Pattern commentPattern) {
-        int fileCommentCount = countComments(file, commentPattern);
+        fileCommentCount = countComments(file, commentPattern);
         if (fileCommentCount != commentCount) {
             fileNameLabel.setForeground(Color.RED);
             commentCountField.setForeground(Color.RED);
         } else {
-            // Reset the text color to the default
             fileNameLabel.setForeground(Color.BLUE);
             commentCountField.setForeground(Color.BLUE);
             if (hasTextAfterGrade) {
@@ -494,6 +545,7 @@ public class CodeAssessment {
                 commentCountField.setForeground(Color.GREEN);
             }
         }
+
     }
 
     /**
@@ -511,6 +563,113 @@ public class CodeAssessment {
 
         JOptionPane.showMessageDialog(null, "CSV file generated successfully!");
     }
+
+    /**
+     * Finds the order number of the assessment based on the caret position.
+     *
+     * @param offset The caret position in the text area.
+     * @return The order number of the assessment.
+     */
+    private int findAssessmentOrderNumber(int offset) {
+        String text = textArea.getText();
+        startIndexofAssesment = text.lastIndexOf("ASSESSMENT", offset);
+        if (startIndexofAssesment != -1) {
+            return countAssessmentOccurrences(text, startIndexofAssesment);
+            } else
+                return 0;
+    }
+
+    /**
+     * Counts the occurrences of the "ASSESSMENT" keyword up to the specified end index.
+     *
+     * @param text     The text to search for occurrences.
+     * @param endIndex The end index for searching occurrences.
+     * @return The number of occurrences of the "ASSESSMENT" keyword.
+     */
+    private int countAssessmentOccurrences(String text, int endIndex) {
+        String substring = text.substring(0, endIndex);
+        String[] words = substring.split("\\s+");
+        int count = 1;
+
+        for (String word : words) {
+            if (word.equals("ASSESSMENT")) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private void createTreeViewPopupMenu() {
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem useThisGradeMenuItem = new JMenuItem("Use this grade");
+        useThisGradeMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                useThisGrade();
+            }
+        });
+        popupMenu.add(useThisGradeMenuItem);
+
+        commentsTree.setComponentPopupMenu(popupMenu);
+    }
+
+    /**
+     * Uses the selected grade from the comments tree and updates the code accordingly.
+     */
+    private void useThisGrade() {
+        if (startIndexofAssesment != -1) {
+            TreePath selectedPath = commentsTree.getSelectionPath();
+            if (selectedPath != null) {
+                DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+                if (selectedNode != null) {
+                    removeAndInsertGradeAndFeedback(startIndexofAssesment, selectedNode);
+                }
+            }
+        }
+    }
+
+    /**
+     * Removes the existing JavaDoc block and inserts the grade and feedback at the specified position.
+     *
+     * @param startIndex    The starting index for removing and inserting.
+     * @param selectedNode  The selected node from the comments tree.
+     */
+    private void removeAndInsertGradeAndFeedback(int startIndex, DefaultMutableTreeNode selectedNode) {
+        try {
+            // Find the start and end of the existing JavaDoc block
+            int commentStart = textArea.getText().lastIndexOf("/**", startIndex);
+            int commentEnd = textArea.getText().indexOf("*/", commentStart) + 2;
+
+            // Remove the existing JavaDoc block
+            textArea.getDocument().remove(commentStart, commentEnd - commentStart);
+
+            // Insert the new JavaDoc block at the position of the specified assessment number
+            insertGradeAndFeedback(startIndex - 4, selectedNode);
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Inserts the grade and feedback at the specified position in the code.
+     *
+     * @param startIndex    The starting index for inserting.
+     * @param commentNode   The selected node from the comments tree.
+     */
+    private void insertGradeAndFeedback(int startIndex, DefaultMutableTreeNode commentNode) {
+        String feedback = "@feedback " + commentNode.toString();
+        String grade = "@grade " + commentNode.getParent().toString();
+        String newText = String.format("/** ASSESSMENT\n * %s\n * %s\n */", grade, feedback);
+
+        try {
+            // Insert the new JavaDoc block at the position of the specified assessment number
+            textArea.getDocument().insertString(startIndex, newText, null);
+            lineNumberArea.repaint();
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * Main method to start the CodeAssessment application.
@@ -562,11 +721,44 @@ public class CodeAssessment {
             int fontHeight = fm.getHeight();
             int baseline = fm.getAscent();
             int lineHeight = textArea.getLineCount() * fontHeight;
+
+            ArrayList<ArrayList<Integer>> lists = null;
+
+            if ((fileCommentCount < 1) && (currentFile != null)) {
+                try {
+                    lists = CodeSplitter.calculateBestSplitsforFile(currentFile, new LineCalculator(new File(refCodeFile)));
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+
             for (int i = 0; i <= lineHeight / fontHeight; i++) {
                 int y = i * fontHeight + baseline;
+                String lineText = getLineText(i);
+
+                if (lineText != null && lineText.contains("ASSESSMENT")) {
+                    g.setColor(Color.RED);
+                    g.setFont(g.getFont().deriveFont(Font.BOLD));
+                } else if ((fileCommentCount < 1 ) && (lists != null) && (lists.get(0).contains(i))) {
+                    g.setFont(g.getFont().deriveFont(Font.BOLD));
+                } else {
+                    g.setColor(Color.BLACK);
+                    g.setFont(g.getFont().deriveFont(Font.PLAIN));
+                }
+
                 g.drawString(String.valueOf(i + 1), 5, y);
             }
             textArea.repaint();
+        }
+
+        private String getLineText(int lineIndex) {
+            try {
+                int startOffset = textArea.getLineStartOffset(lineIndex);
+                int endOffset = textArea.getLineEndOffset(lineIndex);
+                return textArea.getText(startOffset, endOffset - startOffset);
+            } catch (BadLocationException e) {
+                return null;
+            }
         }
     }
 }

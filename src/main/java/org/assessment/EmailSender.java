@@ -18,6 +18,9 @@ public class EmailSender {
     private final String folderPath;
     private final String emailConfigFile;
 
+    private Session session;
+
+    private String smtpUser;
     /**
      * Constructor to initialize file paths and configurations.
      *
@@ -34,8 +37,10 @@ public class EmailSender {
     /**
      * Main method to execute the file consolidation and email sending process.
      */
-    public void run() {
+    public void run(String subject) {
         List<String[]> studentData = readStudentData();
+
+        setEmailConfig();
 
         for (String[] student : studentData) {
             String studentId = student[0];
@@ -43,7 +48,7 @@ public class EmailSender {
 
             List<String> studentFiles = scanFolders(studentId);
             Map<String, StringBuilder> consolidatedFiles = consolidateFilesInMemory(studentId, studentFiles);
-            sendEmailWithConsolidatedContent(studentId, email, consolidatedFiles);
+            sendEmailWithConsolidatedContent(subject, studentId, email, consolidatedFiles);
         }
 
         JOptionPane.showMessageDialog(null, "Emails have been sent to students!");
@@ -129,30 +134,7 @@ public class EmailSender {
      * @param email             The email address of the student
      * @param consolidatedFiles A list of file paths to include in the email
      */
-    private void sendEmailWithConsolidatedContent(String studentId, String email, Map<String, StringBuilder> consolidatedFiles) {
-        String[] emailConfig = readEmailConfig();
-        if (emailConfig.length != 3) {
-            System.err.println("Invalid email configuration file.");
-            return;
-        }
-
-        String smtpServer = emailConfig[0];
-        String smtpUser = emailConfig[1];
-        String smtpPassword = emailConfig[2];
-
-        Properties properties = new Properties();
-        properties.put("mail.smtp.auth", "true");
-        properties.put("mail.smtp.starttls.enable", "true");
-        properties.put("mail.smtp.host", smtpServer);
-        properties.put("mail.smtp.port", "587");
-        properties.put("mail.debug", "false");
-
-        Session session = Session.getInstance(properties,
-                new javax.mail.Authenticator() {
-                    protected PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(smtpUser, smtpPassword);
-                    }
-                });
+    private void sendEmailWithConsolidatedContent(String subject, String studentId, String email, Map<String, StringBuilder> consolidatedFiles) {
 
         try {
 
@@ -162,7 +144,7 @@ public class EmailSender {
                     Message.RecipientType.TO,
                     InternetAddress.parse(email)
             );
-            message.setSubject("Exam Results");
+            message.setSubject(subject);
 
             String body = "Student " + studentId + ":\n\n";
 
@@ -171,14 +153,43 @@ public class EmailSender {
             }
 
             message.setText(body);
-
-            Transport.send(message);
+            if (body.length() > 30)
+                Transport.send(message);
 
             //System.out.println("Done");
 
         } catch (MessagingException e) {
             e.printStackTrace();
         }
+
+    }
+
+
+    private void setEmailConfig()
+    {
+        String[] emailConfig = readEmailConfig();
+        if (emailConfig.length != 3) {
+            System.err.println("Invalid email configuration file.");
+            return;
+        }
+
+        String smtpServer = emailConfig[0];
+        smtpUser = emailConfig[1];
+        String smtpPassword = emailConfig[2];
+
+        Properties properties = new Properties();
+        properties.put("mail.smtp.auth", "true");
+        properties.put("mail.smtp.starttls.enable", "true");
+        properties.put("mail.smtp.host", smtpServer);
+        properties.put("mail.smtp.port", "587");
+        properties.put("mail.debug", "false");
+
+        session = Session.getInstance(properties,
+                new javax.mail.Authenticator() {
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(smtpUser, smtpPassword);
+                    }
+                });
 
     }
 

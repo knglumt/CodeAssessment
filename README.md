@@ -15,23 +15,23 @@ The Code Assessment Tool is a Java application with a graphical user interface (
 ### 2. File Operations
 
 - **Open File:**
-    - Users can open code files using a file chooser.
-    - The application keeps track of the current file, displaying its content in the text area.
+  - Users can open code files using a file chooser.
+  - The application keeps track of the current file, displaying its content in the text area.
 
 - **Save and Open Next:**
-    - Users can save the changes made to the current file and automatically open the next file in the same folder.
+  - Users can save the changes made to the current file and automatically open the next file in the same folder.
 
 - **Previous File:**
-    - Users can navigate to the previous file in the same folder.
+  - Users can navigate to the previous file in the same folder.
 
 ### 3. Code Grading
 
 - **Comment Phrases:**
-    - Users can double-click to insert comment phrases related to assessment and grading.
-    - The tool counts the number of comment phrases in the code for grading purposes.
+  - Users can double-click to insert comment phrases related to assessment and grading.
+  - The tool counts the number of comment phrases in the code for grading purposes.
 
 - **Modes:**
-    - The application supports both read-only and editable modes, allowing users to choose the appropriate mode for their tasks.
+  - The application supports both read-only and editable modes, allowing users to choose the appropriate mode for their tasks.
 
 ### 4. Undo Feature
 
@@ -46,6 +46,26 @@ The Code Assessment Tool is a Java application with a graphical user interface (
 
 - Users can send assessment details to all students via email.
 - The tool uses the `EmailSender` class to accomplish this task.
+
+### 7. Assessment Feedback
+
+- **TreeView:**
+  - The application displays a tree view (`JTree`) of assessment comments, providing a structured overview.
+  - Users can select a comment in the tree view to view details and make changes.
+
+- **Use This Grade:**
+  - Users can use the selected grade from the comments tree to update the code accordingly.
+
+### 8. Line Number Area Enhancements
+
+- **Color-coded Labels:**
+  - Line number labels are color-coded based on the comparison of comment counts, providing visual feedback.
+  - Labels can be red, blue, or green, indicating different states.
+
+### 9. Grade Insertion
+
+- **Insert Grade and Feedback:**
+  - Users can insert grades and feedback at specific positions in the code, improving the grading process.
 
 ## Getting Started
 
@@ -64,6 +84,8 @@ To run the Code Assessment Tool, follow these steps:
 - Utilize the undo feature with Ctrl+Z.
 - Export assessment results to a CSV file using the "Export CSV" button.
 - Send assessment details via email using the "Send Mails" button.
+- Use the tree view to navigate assessment comments and apply grades.
+- Insert grades and feedback at specific positions in the code.
 
 ## Contributing
 
