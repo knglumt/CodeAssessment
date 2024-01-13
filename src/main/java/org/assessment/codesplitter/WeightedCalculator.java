@@ -1,4 +1,6 @@
-package org.assessment;
+package org.assessment.codesplitter;
+
+import org.assessment.codesplitter.PointCalculator;
 
 import java.io.File;
 import java.io.FileNotFoundException;

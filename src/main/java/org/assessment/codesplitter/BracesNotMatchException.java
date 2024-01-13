@@ -1,4 +1,4 @@
-package org.assessment;
+package org.assessment.codesplitter;
 
 import java.util.ArrayList;
 

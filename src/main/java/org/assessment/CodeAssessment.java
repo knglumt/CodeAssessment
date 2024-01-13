@@ -1,5 +1,8 @@
 package org.assessment;
 
+import org.assessment.codesplitter.CodeSplitter;
+import org.assessment.codesplitter.LineCalculator;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.*;

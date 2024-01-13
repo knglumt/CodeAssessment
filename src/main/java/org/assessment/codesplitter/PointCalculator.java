@@ -1,4 +1,4 @@
-package org.assessment;
+package org.assessment.codesplitter;
 
 import java.io.File;
 import java.io.FileNotFoundException;

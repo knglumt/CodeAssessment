@@ -1,4 +1,4 @@
-package org.assessment;
+package org.assessment.codesplitter;
 
 public class Pair<K, V> {
     private final K key;

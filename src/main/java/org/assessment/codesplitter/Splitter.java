@@ -1,4 +1,8 @@
-package org.assessment;
+package org.assessment.codesplitter;
+
+import org.assessment.codesplitter.BracesNotMatchException;
+import org.assessment.codesplitter.Command;
+import org.assessment.codesplitter.Pair;
 
 import java.util.*;
 
