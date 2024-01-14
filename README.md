@@ -2,70 +2,71 @@
 
 ## Overview
 
-The Code Assessment Tool is a Java application with a graphical user interface (GUI) designed for assessing and grading code files. This tool provides a set of features to facilitate code evaluation, navigation, and result management.
+The Code Assessment Tool is a user-friendly Java application designed for assessing and grading code files. This tool provides a set of features to make code evaluation, navigation, and result management easier.
 
 ## Features
 
-### 1. Graphical User Interface (GUI)
+### 1. User-Friendly Interface
 
-- The application is built using Swing, providing an intuitive GUI for users.
-- The main window (`JFrame`) contains a text area (`JTextArea`) for displaying and editing code, accompanied by a line number area for easier navigation.
-- Various buttons, radio buttons, and text fields are provided for user interaction.
+- The application has an intuitive interface for a seamless user experience.
+- The main window displays code in an editable text area, accompanied by a line number area for easy navigation.
+- Various buttons and options are provided for simple interaction.
 
 ### 2. File Operations
 
-- **Open File:**
-  - Users can open code files using a file chooser.
-  - The application keeps track of the current file, displaying its content in the text area.
+- **Open Code Files:**
+  - Open code files effortlessly using the file chooser.
+  - The tool keeps track of the current file, displaying its content in the text area.
 
 - **Save and Open Next:**
-  - Users can save the changes made to the current file and automatically open the next file in the same folder.
+  - Save changes and move to the next file in the same folder seamlessly.
 
-- **Previous File:**
-  - Users can navigate to the previous file in the same folder.
+- **Navigate Files:**
+  - Easily navigate to the previous file in the same folder.
 
 ### 3. Code Grading
 
-- **Comment Phrases:**
-  - Users can double-click to insert comment phrases related to assessment and grading.
-  - The tool counts the number of comment phrases in the code for grading purposes.
+- **Insert Comment Phrases:**
+  - Double-click to insert comment phrases for assessment and grading.
+  - The tool automatically counts the number of comment phrases in the code for grading.
 
-- **Modes:**
-  - The application supports both read-only and editable modes, allowing users to choose the appropriate mode for their tasks.
+- **Read-Only and Editable Modes:**
+  - Choose between read-only and editable modes for different tasks.
 
-### 4. Undo Feature
+- **Undo Changes:**
+  - Use the Ctrl+Z shortcut to undo changes and revert the text area to its previous state.
 
-- Users can undo changes using the Ctrl+Z shortcut, reverting the text area to its previous state.
+### 4. Export Results to CSV
 
-### 5. CSV Export
+- Export assessment results to a CSV file effortlessly.
+- The tool processes folders and generates CSV files based on the current working directory.
 
-- The application can export assessment results to a CSV file.
-- It uses a `CSVExporter` class for processing folders and generating CSV files based on the current working directory.
+### 5. Send Assessment Details via Email
 
-### 6. Email Sending
+- Send assessment details to all students with a simple click.
+- The tool utilizes the EmailSender class to accomplish this task.
 
-- Users can send assessment details to all students via email.
-- The tool uses the `EmailSender` class to accomplish this task.
+### 6. Assessment Feedback
 
-### 7. Assessment Feedback
+- **Tree View Display:**
+  - View a tree view of assessment comments for a structured overview.
+  - Select a comment in the tree view to view details and make changes.
 
-- **TreeView:**
-  - The application displays a tree view (`JTree`) of assessment comments, providing a structured overview.
-  - Users can select a comment in the tree view to view details and make changes.
+- **Use Selected Grade:**
+  - Apply the selected grade from the comments tree to update the code.
 
-- **Use This Grade:**
-  - Users can use the selected grade from the comments tree to update the code accordingly.
+- **Grade Modification:**
+  - Double-click on the feedback on the tree view to modify grading information in a user-friendly manner.
 
-### 8. Line Number Area Enhancements
+### 7. Line Number Area Enhancements
 
-- **Color-coded Labels:**
-  - Line number labels are color-coded based on the comparison of comment counts, providing visual feedback.
-  - Labels can be red, blue, or green, indicating different states.
+- **Color-Coded Labels:**
+  - Line number labels are color-coded to provide visual feedback on comment counts.
 
-### 9. Grade Insertion
+### 8. Grade Insertion
 
-- **Insert Grade and Feedback:**
-  - Users can insert grades and feedback at specific positions in the code, improving the grading process.
+- **Insert Grades and Feedback:**
+  - Add grades and feedback at specific positions in the code for an improved grading process.
 
 ## Getting Started
 
@@ -85,7 +86,7 @@ To run the Code Assessment Tool, follow these steps:
 - Export assessment results to a CSV file using the "Export CSV" button.
 - Send assessment details via email using the "Send Mails" button.
 - Use the tree view to navigate assessment comments and apply grades.
-- Insert grades and feedback at specific positions in the code.
+- Modify grades and feedback by double-clicking on `ASSESSMENT` or `@grade` phrases.
 
 ## Contributing
 

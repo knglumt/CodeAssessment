@@ -7,8 +7,7 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.*;
 import javax.swing.text.*;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.TreePath;
+import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
@@ -77,6 +76,7 @@ public class CodeAssessment {
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(textArea), feedbackPanel);
         splitPane.setResizeWeight(1.0);
+        splitPane.setDividerLocation(frame.getWidth() - 300);
         frame.add(splitPane, BorderLayout.CENTER);
 
         fileNameLabel = new JTextField(30);
@@ -128,7 +128,7 @@ public class CodeAssessment {
         fileChooser = new JFileChooser();
         defaultFolder = new File(System.getProperty("user.dir"));
 
-        createTreeViewPopupMenu();
+        //createTreeViewPopupMenu();
 
         openButton.addActionListener(new ActionListener() {
             @Override
@@ -162,8 +162,7 @@ public class CodeAssessment {
                         saveFile();
                         paintLabels(currentFile.toPath(), commentPattern);
                     } else {
-                        commentsTree.setModel(feedbackTree.buildTreeModel(findAssessmentOrderNumber(offset)).getModel());
-                        commentsTree.repaint();
+                        setFeedbackTree(offset);
                     }
                 }
             }
@@ -201,16 +200,19 @@ public class CodeAssessment {
         });
 
         commentsTree.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                // ...
-                if (editableRadioButton.isSelected() && SwingUtilities.isRightMouseButton(e)) {
-                    commentsTree.setSelectionPath(commentsTree.getPathForLocation(e.getX(), e.getY()));
-                    commentsTree.getComponentPopupMenu().show(commentsTree, e.getX(), e.getY());
-                }
-            }
-            // ...
-        });
+                                          @Override
+                                          public void mouseClicked(MouseEvent e) {
+                                              if (e.getClickCount() == 2) {
+                                                  TreePath selectedPath = commentsTree.getPathForLocation(e.getX(), e.getY());
+                                                  if (selectedPath != null) {
+                                                      DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+                                                      if (selectedNode != null) {
+                                                          useThisGrade();
+                                                      }
+                                                  }
+                                              }
+                                          }
+                                      });
         mailButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -437,6 +439,7 @@ public class CodeAssessment {
             contentStack.clear();
             contentStack.push(textArea.getText());
             //findRefCode();
+            setFeedbackTree(0);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -522,8 +525,7 @@ public class CodeAssessment {
             commentCountField.setText("Number of Segments: Not found!");
         } else {
             feedbackTree = new FeedbackTree(folderPath);
-            commentsTree.setModel(feedbackTree.buildTreeModel(findAssessmentOrderNumber(0)).getModel());
-            commentsTree.repaint();
+            setFeedbackTree(0);
             commentsTree.setVisible(true);
         }
 
@@ -602,20 +604,6 @@ public class CodeAssessment {
         return count;
     }
 
-    private void createTreeViewPopupMenu() {
-        JPopupMenu popupMenu = new JPopupMenu();
-        JMenuItem useThisGradeMenuItem = new JMenuItem("Use this grade");
-        useThisGradeMenuItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                useThisGrade();
-            }
-        });
-        popupMenu.add(useThisGradeMenuItem);
-
-        commentsTree.setComponentPopupMenu(popupMenu);
-    }
-
     /**
      * Uses the selected grade from the comments tree and updates the code accordingly.
      */
@@ -631,6 +619,24 @@ public class CodeAssessment {
         }
     }
 
+    private void setFeedbackTree(int offset){
+        TreeModel treeModel = feedbackTree.buildTreeModel(findAssessmentOrderNumber(offset)).getModel();
+        commentsTree.setModel(treeModel);
+        expandAllNodes(new TreePath(treeModel.getRoot()), commentsTree);
+    }
+
+    private void expandAllNodes(TreePath parent, JTree tree) {
+        // Traverse the tree recursively and expand each node
+        TreeNode node = (TreeNode) parent.getLastPathComponent();
+        for (int i = 0; i < node.getChildCount(); i++) {
+            TreeNode child = node.getChildAt(i);
+            TreePath path = parent.pathByAddingChild(child);
+            expandAllNodes(path, tree);
+        }
+
+        // Expand the current node
+        tree.expandPath(parent);
+    }
     /**
      * Removes the existing JavaDoc block and inserts the grade and feedback at the specified position.
      *
@@ -645,9 +651,12 @@ public class CodeAssessment {
 
             // Remove the existing JavaDoc block
             textArea.getDocument().remove(commentStart, commentEnd - commentStart);
+            unsavedChanges = true;
+            saveFile();
 
             // Insert the new JavaDoc block at the position of the specified assessment number
             insertGradeAndFeedback(startIndex - 4, selectedNode);
+
         } catch (BadLocationException e) {
             e.printStackTrace();
         }

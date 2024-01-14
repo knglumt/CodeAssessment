@@ -87,8 +87,22 @@ public class FeedbackTree extends JFrame {
                             DefaultMutableTreeNode feedbackNode = new DefaultMutableTreeNode(feedbackComment);
 
                             if (gradeNodes.containsKey(gradeComment)) {
-                                if (gradeNodes.get(gradeComment).getIndex(feedbackNode) < 0)
-                                    gradeNodes.get(gradeComment).add(feedbackNode);
+                                DefaultMutableTreeNode gradeNode = gradeNodes.get(gradeComment);
+
+                                // Check if a child node with the same content already exists
+                                boolean nodeExists = false;
+                                for (int j = 0; j < gradeNode.getChildCount(); j++) {
+                                    DefaultMutableTreeNode existingChild = (DefaultMutableTreeNode) gradeNode.getChildAt(j);
+                                    if (existingChild.getUserObject().equals(feedbackNode.getUserObject())) {
+                                        nodeExists = true;
+                                        break;
+                                    }
+                                }
+
+                                // If not, add the new feedback node
+                                if (!nodeExists) {
+                                    gradeNode.add(feedbackNode);
+                                }
                             } else {
                                 DefaultMutableTreeNode defaulNode = new DefaultMutableTreeNode(gradeComment);
                                 gradeNodes.put(gradeComment, defaulNode);
