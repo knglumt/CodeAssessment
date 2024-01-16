@@ -651,11 +651,12 @@ public class CodeAssessment {
 
             // Remove the existing JavaDoc block
             textArea.getDocument().remove(commentStart, commentEnd - commentStart);
-            unsavedChanges = true;
-            saveFile();
 
             // Insert the new JavaDoc block at the position of the specified assessment number
             insertGradeAndFeedback(startIndex - 4, selectedNode);
+
+            unsavedChanges = true;
+            saveFile();
 
         } catch (BadLocationException e) {
             e.printStackTrace();
