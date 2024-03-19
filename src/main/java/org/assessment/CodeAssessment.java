@@ -163,6 +163,7 @@ public class CodeAssessment {
                         paintLabels(currentFile.toPath(), commentPattern);
                     } else {
                         setFeedbackTree(offset);
+                        feedbackTree.closeCurrentPopup();
                     }
                 }
             }
@@ -213,6 +214,27 @@ public class CodeAssessment {
                                               }
                                           }
                                       });
+
+        commentsTree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                JTree tree = (JTree) e.getSource();
+                TreePath path = tree.getPathForLocation(e.getX(), e.getY());
+                if (path != null) {
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                    if (node != null && node.getUserObject() != null) {
+                        String feedback = node.getUserObject().toString();
+                        if (!feedback.isEmpty()) {
+                            String codeSnippet = feedbackTree.findCodeSnippet(feedback);
+                            if (codeSnippet != null) {
+                                feedbackTree.showFeedbackCodeSnippetTooltip(tree, e.getX(), e.getY(), codeSnippet);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         mailButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
