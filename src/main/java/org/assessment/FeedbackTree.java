@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -58,7 +59,9 @@ public class FeedbackTree extends JFrame {
 
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("FEEDBACKS - Split Point " + splitID);
 
-        gradeNodes.forEach((grade, feedbackNode) -> {
+        TreeMap<String, DefaultMutableTreeNode> sortedGradeNodes = new TreeMap<>(gradeNodes);
+
+        sortedGradeNodes.forEach((grade, feedbackNode) -> {
             root.add(feedbackNode);
         });
 
