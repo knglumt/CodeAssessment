@@ -155,6 +155,7 @@ public class CodeAssessment {
         textArea.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                feedbackTree.closeCurrentPopup();
                 int offset = textArea.viewToModel(e.getPoint());
                 if (e.getClickCount() == 2) {
                     if (readOnlyRadioButton.isSelected()) {
@@ -163,7 +164,6 @@ public class CodeAssessment {
                         paintLabels(currentFile.toPath(), commentPattern);
                     } else {
                         setFeedbackTree(offset);
-                        feedbackTree.closeCurrentPopup();
                     }
                 }
             }
@@ -292,6 +292,7 @@ public class CodeAssessment {
      * Saves the content of the current file in the JTextArea.
      */
     private void saveFile() {
+        feedbackTree.closeCurrentPopup();
         if (currentLineCount != textArea.getLineCount() ) {
             unsavedChanges = true;
         }
@@ -585,7 +586,7 @@ public class CodeAssessment {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String outputCsv = "Grades_" + timeStamp + ".csv";
 
-        Map<String, Map<String, Map<String, Integer>>> results = csvExporter.processFolder(rootFolder);
+        Map<String, Map<String, Map<String, Integer>>> results = csvExporter.processFolder(rootFolder, "student_mails.txt");
         csvExporter.generateCsv(results, outputCsv);
 
         JOptionPane.showMessageDialog(null, "CSV file generated successfully!");

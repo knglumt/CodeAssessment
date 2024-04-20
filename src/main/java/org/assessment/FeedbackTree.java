@@ -133,7 +133,7 @@ public class FeedbackTree extends JFrame {
      */
     public void closeCurrentPopup() {
         if (currentPopup != null) {
-            currentPopup.hide();
+            currentPopup.hide(); ;
             currentPopup = null;
         }
     }

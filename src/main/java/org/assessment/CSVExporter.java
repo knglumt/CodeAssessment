@@ -5,17 +5,20 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * The CSVExporter class provides methods for processing folders, extracting grades, and generating a CSV file.
+ * The CSVExporter class provides methods for processing folders, extracting grades, and ensuring all students are listed,
+ * including generating a CSV file with grades.
  */
 public class CSVExporter {
 
     /**
-     * Processes the specified root folder, extracts student grades from files, and organizes the data.
+     * Processes the specified root folder and student mail file, extracts student grades from files,
+     * and ensures all listed students in the mail file are included, even if they have no grades.
      *
-     * @param rootFolder The root folder to process.
-     * @return A map containing subfolder names as keys and a map of student IDs and their total grades as values.
+     * @param rootFolder The root folder containing subfolders of student files.
+     * @param studentMailsFile The filename of the student mails within the root folder.
+     * @return A map with subfolder names as keys and a map of student IDs to their grades as values.
      */
-    static Map<String, Map<String, Map<String, Integer>>> processFolder(String rootFolder) {
+    static Map<String, Map<String, Map<String, Integer>>> processFolder(String rootFolder, String studentMailsFile) {
         Map<String, Map<String, Map<String, Integer>>> results = new HashMap<>();
 
         File folder = new File(rootFolder);
@@ -33,13 +36,12 @@ public class CSVExporter {
                     try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                         String line;
                         int sum = 0;
-                        int score = 0;
                         Map<String, Integer> individualScores = new HashMap<>();
 
                         int section = 1;
                         while ((line = reader.readLine()) != null) {
                             if (line.contains("@grade")) {
-                                score = extractAndSumGrades(line);
+                                int score = extractAndSumGrades(line);
                                 sum += score;
                                 individualScores.put("Score" + section, score);
                                 section++;
@@ -48,7 +50,6 @@ public class CSVExporter {
 
                         individualScores.put("Total", sum);
                         studentData.put(studentId, individualScores);
-
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -58,9 +59,26 @@ public class CSVExporter {
             }
         }
 
+        File mailsFile = new File(rootFolder, studentMailsFile);
+        try (Scanner scanner = new Scanner(mailsFile)) {
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+                String[] parts = line.split(",");
+                String studentId = parts[0];
+
+                if (!results.values().stream().anyMatch(m -> m.containsKey(studentId))) {
+                    for (String folderName : results.keySet()) {
+                        results.get(folderName).putIfAbsent(studentId, createEmptyGradeMap());
+                    }
+                }
+            }
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
         return results;
     }
-
 
     /**
      * Extracts the student ID from a given file name.
@@ -74,6 +92,17 @@ public class CSVExporter {
     }
 
     /**
+     * Creates an empty grade map for students with no grades.
+     *
+     * @return A map with a single entry "Total" set to 0.
+     */
+    private static Map<String, Integer> createEmptyGradeMap() {
+        Map<String, Integer> emptyMap = new HashMap<>();
+        emptyMap.put("Total", 0);
+        return emptyMap;
+    }
+
+    /**
      * Extracts and sums up grades from a line containing "@grade" comments.
      *
      * @param line The line containing grade information.
@@ -82,7 +111,6 @@ public class CSVExporter {
     private static int extractAndSumGrades(String line) {
         String[] grades = line.replaceAll("[^0-9]+", " ").trim().split(" ");
         int sum = 0;
-
         for (String grade : grades) {
             if (!grade.isEmpty()) {
                 if (line.contains("-"))
@@ -91,19 +119,17 @@ public class CSVExporter {
                     sum += Integer.parseInt(grade);
             }
         }
-
         return sum;
     }
 
     /**
-     * Generates a CSV file based on the processed data.
+     * Generates a CSV file based on the processed data, listing all students and their grades.
      *
      * @param results   The processed data containing subfolder names and student grades.
      * @param outputCsv The path to the output CSV file.
      */
     static void generateCsv(Map<String, Map<String, Map<String, Integer>>> results, String outputCsv) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputCsv))) {
-
             writer.print("Student ID,");
             for (String folderName : results.keySet()) {
                 writer.print(folderName + ",");
@@ -121,13 +147,13 @@ public class CSVExporter {
                 int totalGrade = 0;
                 for (Map.Entry<String, Map<String, Map<String, Integer>>> entry : results.entrySet()) {
                     Map<String, Map<String, Integer>> folderData = entry.getValue();
-                    Map<String, Integer> studentData = folderData.getOrDefault(studentId, new HashMap<>());
+                    Map<String, Integer> studentData = folderData.getOrDefault(studentId, createEmptyGradeMap());
                     int grade = studentData.getOrDefault("Total", 0);
                     writer.print(grade + ",");
 
                     boolean scoreValues = false;
                     for (Map.Entry<String, Integer> scoreEntry : studentData.entrySet()) {
-                        if (scoreEntry.getKey().startsWith("Score")){
+                        if (scoreEntry.getKey().startsWith("Score")) {
                             writer.print(scoreEntry.getValue() + " ");
                             scoreValues = true;
                         }

@@ -9,24 +9,24 @@ import javax.mail.internet.*;
 import javax.swing.*;
 
 /**
- * This class consolidates files for students, sends an email with file details,
- * and reads email configuration from a file.
+ * This class is designed to send emails to a list of students based on data provided through various files.
+ * It reads student data, scans for relevant files, and sends emails with those files attached.
  */
 public class EmailSender {
 
     private final String textFilePath;
     private final String folderPath;
     private final String emailConfigFile;
-
     private Session session;
-
     private String smtpUser;
+
     /**
-     * Constructor to initialize file paths and configurations.
+     * Constructs an EmailSender with specified file paths for student data, folder containing relevant files,
+     * and email configuration.
      *
-     * @param textFilePath      The path to the student data text file
-     * @param folderPath        The path to the folders
-     * @param emailConfigFile   The path to the email configuration file
+     * @param textFilePath    Path to the text file containing student data.
+     * @param folderPath      Path to the folder containing student and reference code files.
+     * @param emailConfigFile Path to the file containing email server configuration.
      */
     public EmailSender(String textFilePath, String folderPath, String emailConfigFile) {
         this.textFilePath = textFilePath;
@@ -35,37 +35,41 @@ public class EmailSender {
     }
 
     /**
-     * Main method to execute the file consolidation and email sending process.
+     * Starts the process of reading student data, setting email configuration, and sending emails.
+     *
+     * @param subject The subject line for the emails to be sent.
      */
     public void run(String subject) {
         List<String[]> studentData = readStudentData();
-
         setEmailConfig();
 
         for (String[] student : studentData) {
             String studentId = student[0];
             String email = student[1];
 
-            List<String> studentFiles = scanFolders(studentId);
-            Map<String, StringBuilder> consolidatedFiles = consolidateFilesInMemory(studentId, studentFiles);
-            sendEmailWithConsolidatedContent(subject, studentId, email, consolidatedFiles);
+            Map<String, StringBuilder> allFiles = scanAndConsolidate(studentId);
+            Map<String, StringBuilder> refCodeFiles = new HashMap<>(allFiles);
+            allFiles.keySet().removeIf(key -> key.toLowerCase().contains("refcode"));
+            refCodeFiles.keySet().removeIf(key -> !key.toLowerCase().contains("refcode"));
+
+            sendEmail(subject + "-Student Codes", studentId, email, allFiles, " ***STUDENT CODES***");
+            sendEmail(subject + "-Reference Codes", "***INSTRUCTOR", email, refCodeFiles, " REFERENCE CODES***");
         }
 
         JOptionPane.showMessageDialog(null, "Emails have been sent to students!");
     }
 
     /**
-     * Reads student data from a text file.
+     * Reads student data from a specified file and returns a list of student IDs and emails.
      *
-     * @return A list of String arrays containing student data (id and email)
+     * @return A list of string arrays, each containing a student ID and email.
      */
     private List<String[]> readStudentData() {
         List<String[]> studentData = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(textFilePath))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                String[] student = line.split(",");
-                studentData.add(student);
+                studentData.add(line.split(","));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -74,130 +78,102 @@ public class EmailSender {
     }
 
     /**
-     * Scans folders for files related to a student.
+     * Scans a specified folder recursively and consolidates files that contain either the student ID or "refcode".
      *
-     * @param studentId   The ID of the student
-     * @return A list of file paths related to the student
+     * @param studentId The student ID to search for within file names.
+     * @return A map containing file names as keys and their content as values.
      */
-    private List<String> scanFolders(String studentId) {
-        List<String> studentFiles = new ArrayList<>();
-        File folder = new File(folderPath);
-
-        scanFolderRecursively(folder, studentId, studentFiles);
-
-        return studentFiles;
-    }
-
-    private void scanFolderRecursively(File folder, String studentId, List<String> studentFiles) {
-        if (folder.isDirectory()) {
-            File[] files = folder.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        // Recursive call for subdirectories
-                        scanFolderRecursively(file, studentId, studentFiles);
-                    } else if (file.isFile() && file.getName().toLowerCase().contains(studentId.toLowerCase())) {
-                        studentFiles.add(file.getAbsolutePath());
-                    }
-                }
-            } else {
-                System.err.println("Error listing files in the folder: " + folder.getAbsolutePath());
-            }
-        } else {
-            System.err.println("The specified path is not a directory: " + folder.getAbsolutePath());
-        }
-    }
-
-    /**
-     * Consolidates files for a student
-     *
-     * @param studentId     The ID of the student
-     * @param files         A list of file paths to consolidate
-     */
-    private Map<String, StringBuilder> consolidateFilesInMemory(String studentId, List<String> files) {
+    private Map<String, StringBuilder> scanAndConsolidate(String studentId) {
         Map<String, StringBuilder> consolidatedFiles = new HashMap<>();
-
-        for (String filePath : files) {
-            File file = new File(filePath);
-            String fileName = file.getName();
-            String folderName = file.getParentFile().getName();
-            String fileContent = readFileContent(filePath);
-            consolidatedFiles.computeIfAbsent(fileName, k -> new StringBuilder()).append(folderName).append("\n").append(fileContent).append("\n\n\n");
-        }
+        File folder = new File(folderPath);
+        scanFolderRecursively(folder, studentId, consolidatedFiles);
         return consolidatedFiles;
     }
 
     /**
-     * Sends an email to a student with consolidated file details.
+     * Helper method to recursively scan a folder and accumulate files relevant to a specific student ID or refcode.
      *
-     * @param studentId         The ID of the student
-     * @param email             The email address of the student
-     * @param consolidatedFiles A list of file paths to include in the email
+     * @param folder The folder to scan.
+     * @param studentId The student ID to filter files by.
+     * @param consolidatedFiles A map to accumulate file names and content.
      */
-    private void sendEmailWithConsolidatedContent(String subject, String studentId, String email, Map<String, StringBuilder> consolidatedFiles) {
+    private void scanFolderRecursively(File folder, String studentId, Map<String, StringBuilder> consolidatedFiles) {
+        File[] files = folder.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    scanFolderRecursively(file, studentId, consolidatedFiles);
+                } else if (file.isFile() && (file.getName().toLowerCase().contains(studentId.toLowerCase()) || file.getName().toLowerCase().contains("refcode"))) {
+                    String fileName = file.getName();
+                    String folderName = file.getParentFile().getName();
+                    String fileContent = readFileContent(file.getPath());
+                    consolidatedFiles.computeIfAbsent(fileName, k -> new StringBuilder())
+                            .append(folderName).append("\n").append(fileContent).append("\n\n\n");
+                }
+            }
+        } else {
+            System.err.println("Error listing files in the folder: " + folder.getAbsolutePath());
+        }
+    }
 
+    /**
+     * Sends an email to a specified recipient with a set of files as the email body.
+     *
+     * @param subject     The subject of the email.
+     * @param studentId   The student ID to include in the email body.
+     * @param email       The recipient's email address.
+     * @param files       The files to be included in the email body.
+     * @param description A description to prepend to the file contents in the email body.
+     */
+    private void sendEmail(String subject, String studentId, String email, Map<String, StringBuilder> files, String description) {
         try {
-
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress(smtpUser));
-            message.setRecipients(
-                    Message.RecipientType.TO,
-                    InternetAddress.parse(email)
-            );
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
             message.setSubject(subject);
 
-            String body = "Student " + studentId + ":\n\n";
+            StringBuilder body = new StringBuilder(studentId).append(description).append(":\n\n");
+            files.forEach((fileName, content) -> body.append(fileName).append("\n").append(content).append("\n\n"));
+            message.setText(body.toString());
 
-            for (Map.Entry<String, StringBuilder> entry : consolidatedFiles.entrySet()) {
-                body += "\n" + entry.getValue() + "\n\n";
-            }
-
-            message.setText(body);
-            if (body.length() > 30)
+            if (!files.isEmpty()) {
                 Transport.send(message);
-
-            //System.out.println("Done");
-
+            }
         } catch (MessagingException e) {
             e.printStackTrace();
         }
-
     }
 
-
-    private void setEmailConfig()
-    {
+    /**
+     * Configures the email session using details from the email configuration file.
+     */
+    private void setEmailConfig() {
         String[] emailConfig = readEmailConfig();
         if (emailConfig.length != 3) {
             System.err.println("Invalid email configuration file.");
             return;
         }
 
-        String smtpServer = emailConfig[0];
-        smtpUser = emailConfig[1];
-        String smtpPassword = emailConfig[2];
-
         Properties properties = new Properties();
         properties.put("mail.smtp.auth", "true");
         properties.put("mail.smtp.starttls.enable", "true");
-        properties.put("mail.smtp.host", smtpServer);
+        properties.put("mail.smtp.host", emailConfig[0]);
         properties.put("mail.smtp.port", "587");
         properties.put("mail.debug", "false");
 
-        session = Session.getInstance(properties,
-                new javax.mail.Authenticator() {
-                    protected PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(smtpUser, smtpPassword);
-                    }
-                });
-
+        session = Session.getInstance(properties, new Authenticator() {
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(emailConfig[1], emailConfig[2]);
+            }
+        });
+        smtpUser = emailConfig[1];
     }
 
     /**
-     * Reads the content of a file.
+     * Reads the content of a file and returns it as a string.
      *
-     * @param filePath The path to the file
-     * @return The content of the file as a string
+     * @param filePath The path to the file to read.
+     * @return The content of the file as a string.
      */
     private String readFileContent(String filePath) {
         try {
@@ -209,9 +185,9 @@ public class EmailSender {
     }
 
     /**
-     * Reads email configuration from a file.
+     * Reads the email configuration from a file.
      *
-     * @return An array containing email configuration values (SMTP server, email, password)
+     * @return An array of strings containing the SMTP host, user, and password.
      */
     private String[] readEmailConfig() {
         try (BufferedReader reader = new BufferedReader(new FileReader(emailConfigFile))) {
