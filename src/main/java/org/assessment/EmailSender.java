@@ -19,6 +19,7 @@ public class EmailSender {
     private final String emailConfigFile;
     private Session session;
     private String smtpUser;
+    private int mailCount;
 
     /**
      * Constructs an EmailSender with specified file paths for student data, folder containing relevant files,
@@ -42,6 +43,7 @@ public class EmailSender {
     public void run(String subject) {
         List<String[]> studentData = readStudentData();
         setEmailConfig();
+        mailCount = 0;
 
         for (String[] student : studentData) {
             String studentId = student[0];
@@ -52,11 +54,14 @@ public class EmailSender {
             allFiles.keySet().removeIf(key -> key.toLowerCase().contains("refcode"));
             refCodeFiles.keySet().removeIf(key -> !key.toLowerCase().contains("refcode"));
 
+            //System.out.println("Sending: " + studentId );
+            //System.out.println("Mail: " + email );
+
             sendEmail(subject + "-Student Codes", studentId, email, allFiles, " ***STUDENT CODES***");
             sendEmail(subject + "-Reference Codes", "***INSTRUCTOR", email, refCodeFiles, " REFERENCE CODES***");
         }
 
-        JOptionPane.showMessageDialog(null, "Emails have been sent to students!");
+        JOptionPane.showMessageDialog(null,  mailCount + " emails have been sent to students!");
     }
 
     /**
@@ -137,7 +142,10 @@ public class EmailSender {
             message.setText(body.toString());
 
             if (!files.isEmpty()) {
+                //System.out.println("Sent :" + studentId );
                 Transport.send(message);
+                if (subject.toLowerCase().contains("student"))
+                    mailCount++;
             }
         } catch (MessagingException e) {
             e.printStackTrace();

@@ -98,7 +98,7 @@ public class CSVExporter {
      */
     private static Map<String, Integer> createEmptyGradeMap() {
         Map<String, Integer> emptyMap = new HashMap<>();
-        emptyMap.put("Total", 0);
+        emptyMap.put("Total", null);
         return emptyMap;
     }
 
@@ -145,11 +145,19 @@ public class CSVExporter {
                 writer.print(studentId + ",");
 
                 int totalGrade = 0;
+                boolean graded = false;
                 for (Map.Entry<String, Map<String, Map<String, Integer>>> entry : results.entrySet()) {
                     Map<String, Map<String, Integer>> folderData = entry.getValue();
                     Map<String, Integer> studentData = folderData.getOrDefault(studentId, createEmptyGradeMap());
-                    int grade = studentData.getOrDefault("Total", 0);
-                    writer.print(grade + ",");
+
+                    int grade = 0;
+                    try {
+                        grade = studentData.getOrDefault("Total", 0);
+                        writer.print(grade + ",");
+                        graded = true;
+                    } catch (Exception e) {
+                        writer.print(" ,");
+                    }
 
                     boolean scoreValues = false;
                     for (Map.Entry<String, Integer> scoreEntry : studentData.entrySet()) {
@@ -159,12 +167,16 @@ public class CSVExporter {
                         }
                     }
 
-                    if (!scoreValues) writer.print("0");
+                    if (!scoreValues) writer.print(" ");
                     writer.print(",");
 
                     totalGrade += grade;
                 }
-                writer.println(totalGrade);
+
+                if (graded)
+                    writer.println(totalGrade);
+                else
+                    writer.println(" ");
             }
 
         } catch (IOException e) {
