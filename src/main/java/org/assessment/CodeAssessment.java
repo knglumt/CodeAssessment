@@ -95,10 +95,19 @@ public class CodeAssessment {
         readOnlyRadioButton = new JRadioButton("Code Segmentation");
         JRadioButton editableRadioButton = new JRadioButton("Code Grading");
 
+        JLabel fontSizeLabel = new JLabel("Font Size: ");
         ButtonGroup radioButtonGroup = new ButtonGroup();
         radioButtonGroup.add(readOnlyRadioButton);
         radioButtonGroup.add(editableRadioButton);
         radioButtonGroup.setSelected(readOnlyRadioButton.getModel(), true);
+
+        Integer[] fontSizes = new Integer[17];
+        for (int i = 0; i < fontSizes.length; i++) {
+            fontSizes[i] = 8 + i; // From 8 to 24
+        }
+        JComboBox<Integer> fontSizeComboBox = new JComboBox<>(fontSizes);
+        fontSizeComboBox.setSelectedItem(12);
+        textArea.setFont(new Font("Arial", Font.PLAIN, 12));
 
         JButton openButton = new JButton("Open");
         JButton saveAndOpenButton = new JButton("Next >>");
@@ -122,6 +131,8 @@ public class CodeAssessment {
         paramPanel.add(editableRadioButton);
         paramPanel.add(refCodeField);
         paramPanel.add(commentCountField);
+        paramPanel.add(fontSizeLabel);
+        paramPanel.add(fontSizeComboBox);
 
         feedbackPanel.add(new JScrollPane(commentsTree), BorderLayout.CENTER);
 
@@ -129,6 +140,15 @@ public class CodeAssessment {
         defaultFolder = new File(System.getProperty("user.dir"));
 
         //createTreeViewPopupMenu();
+
+        fontSizeComboBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedFontSize = (Integer) fontSizeComboBox.getSelectedItem();
+                textArea.setFont(new Font(textArea.getFont().getName(), Font.PLAIN, selectedFontSize));
+                lineNumberArea.setFont(new Font(lineNumberArea.getFont().getName(), Font.PLAIN, selectedFontSize));
+            }
+        });
 
         openButton.addActionListener(new ActionListener() {
             @Override
