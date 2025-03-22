@@ -348,24 +348,37 @@ public class CodeAssessment {
             int selectedRowIndex = textArea.getLineOfOffset(caretPosition);
             int lineStart = textArea.getLineStartOffset(selectedRowIndex);
             int lineEnd = textArea.getLineEndOffset(selectedRowIndex);
+            String line = textArea.getText(lineStart, lineEnd - lineStart).trim();
 
-            String line = textArea.getText(lineStart, lineEnd - lineStart);
+            String controlStatementRegex = "\\b(if|else\\s*if|else|for|while|do|switch|case|try|catch|finally|goto|throw)\\b.*\\{";
+            Pattern controlPattern = Pattern.compile(controlStatementRegex);
+            Matcher matcher = controlPattern.matcher(textArea.getText());
+
+            while (matcher.find()) {
+                int controlStart = matcher.start();
+                int openingBracePos = textArea.getText().indexOf("{", controlStart);
+
+                int closingBracePos = findMatchingClosingBrace(openingBracePos);
+
+                if (caretPosition > openingBracePos && caretPosition < closingBracePos) {
+                    JOptionPane.showMessageDialog(frame, "Cannot insert comments inside control statement bodies!", "Insertion Error", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            }
 
             if (line.contains("ASSESSMENT") || line.contains("@grade") || line.contains("@feedback") || line.contains("*/")) {
                 if (line.contains("ASSESSMENT")) {
-
                     int lineStartGrade = textArea.getLineStartOffset(selectedRowIndex + 1);
                     int lineEndGrade = textArea.getLineEndOffset(selectedRowIndex + 1);
                     String lineGrade = textArea.getText(lineStartGrade, lineEndGrade - lineStartGrade);
                     boolean deleteComment = true;
                     if (lineGrade.contains("@grade") && lineGrade.trim().length() > 8) {
                         int response = JOptionPane.showConfirmDialog(null,
-                                "Grading has been done, deleted anyway?", "Confirmation", JOptionPane.YES_NO_OPTION);
+                                "Grading has been done, delete anyway?", "Confirmation", JOptionPane.YES_NO_OPTION);
                         if (response == JOptionPane.NO_OPTION) {
                             deleteComment = false;
                         }
                     }
-
                     if (deleteComment) {
                         for (int i = 0; i < 4; i++) {
                             if (selectedRowIndex < textArea.getLineCount()) {
@@ -375,17 +388,12 @@ public class CodeAssessment {
                             }
                         }
                     }
-
-                }
-                else if (line.contains("@grade")) {
-                    // Double-clicked on @grade, add grade zero
-                    String newLine = line.replace("@grade", "@grade 0");
+                } else if (line.contains("@grade") && !line.contains("@grade 0")) {
+                    String newLine = line.replace("* @grade", " * @grade 0\n");
                     textArea.getDocument().remove(lineStart, lineEnd - lineStart);
                     textArea.getDocument().insertString(lineStart, newLine, null);
                 }
-            }
-            else {
-                // Insert a new JavaDoc comment
+            } else {
                 String text = "/** ASSESSMENT\n";
                 text += " * @grade \n";
                 text += " * @feedback \n";
@@ -399,6 +407,30 @@ public class CodeAssessment {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Finds the matching closing brace for a given opening brace.
+     *
+     * @param openingBracePos The position of the opening brace.
+     * @return The position of the matching closing brace, or -1 if not found.
+     */
+    private int findMatchingClosingBrace(int openingBracePos) {
+        int balance = 1;
+        for (int i = openingBracePos + 1; i < textArea.getText().length(); i++) {
+            char c = textArea.getText().charAt(i);
+            if (c == '{') {
+                balance++;
+            } else if (c == '}') {
+                balance--;
+            }
+            if (balance == 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+
 
     /**
      * Saves the current file and opens the next file in the same folder.
