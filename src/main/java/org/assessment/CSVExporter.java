@@ -63,7 +63,7 @@ public class CSVExporter {
         try (Scanner scanner = new Scanner(mailsFile)) {
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine().trim();
-                String[] parts = line.split(",");
+                String[] parts = line.split("\\s*[;,]\\s*");
                 String studentId = parts[0];
 
                 if (!results.values().stream().anyMatch(m -> m.containsKey(studentId))) {

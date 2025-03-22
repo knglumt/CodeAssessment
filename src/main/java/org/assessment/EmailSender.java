@@ -74,7 +74,7 @@ public class EmailSender {
         try (BufferedReader reader = new BufferedReader(new FileReader(textFilePath))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                studentData.add(line.split(","));
+                studentData.add(line.split("\\s*[;,]\\s*"));
             }
         } catch (IOException e) {
             e.printStackTrace();
