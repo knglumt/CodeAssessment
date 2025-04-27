@@ -42,15 +42,23 @@ public class FeedbackTree extends JFrame {
      * Builds a JTree model based on feedback files in the specified folder.
      *
      * @param splitID The split point identifier.
+     * @param contentFilter Optional value to filter files by content. If null, all files are processed.
      * @return The constructed JTree.
      */
-    public JTree buildTreeModel(int splitID) {
+    public JTree buildTreeModel(int splitID, String contentFilter) {
         String folderPath = path;
         Map<String, DefaultMutableTreeNode> gradeNodes = new HashMap<>();
 
         try {
             Files.walk(Paths.get(folderPath))
                     .filter(Files::isRegularFile)
+                    .filter(file -> {
+                        try {
+                            return contentFilter == null || fileContainsContent(file, contentFilter);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
                     .forEach(file -> processFile(file, splitID, gradeNodes));
 
         } catch (IOException e) {
@@ -68,6 +76,14 @@ public class FeedbackTree extends JFrame {
         commentsTree = new JTree(root);
 
         return commentsTree;
+    }
+
+    /**
+     * Checks if a file contains the specified content.
+     */
+    private boolean fileContainsContent(Path file, String contentFilter) throws IOException {
+        return Files.lines(file)
+                .anyMatch(line -> line.toLowerCase().contains(contentFilter));
     }
 
     /**

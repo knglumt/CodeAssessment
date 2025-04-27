@@ -695,7 +695,12 @@ public class CodeAssessment {
     }
 
     private void setFeedbackTree(int offset){
-        TreeModel treeModel = feedbackTree.buildTreeModel(findAssessmentOrderNumber(offset)).getModel();
+        String RefCode2 = null;
+        if (textArea.getText().toLowerCase().contains("refcode2")) {
+            RefCode2 = "refcode2";
+        }
+
+        TreeModel treeModel = feedbackTree.buildTreeModel(findAssessmentOrderNumber(offset), RefCode2).getModel();
         commentsTree.setModel(treeModel);
         expandAllNodes(new TreePath(treeModel.getRoot()), commentsTree);
     }

@@ -36,7 +36,8 @@ public class CSVExporter {
                     try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                         String line;
                         int sum = 0;
-                        Map<String, Integer> individualScores = new HashMap<>();
+
+                        Map<String, Integer> individualScores = new LinkedHashMap<>(); // Preserves insertion order
 
                         int section = 1;
                         while ((line = reader.readLine()) != null) {
@@ -128,8 +129,10 @@ public class CSVExporter {
      * @param results   The processed data containing subfolder names and student grades.
      * @param outputCsv The path to the output CSV file.
      */
+
     static void generateCsv(Map<String, Map<String, Map<String, Integer>>> results, String outputCsv) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputCsv))) {
+            // Write CSV header
             writer.print("Student ID,");
             for (String folderName : results.keySet()) {
                 writer.print(folderName + ",");
@@ -137,46 +140,41 @@ public class CSVExporter {
             }
             writer.println("Total Grade");
 
+            // Collect all student IDs
             Set<String> allStudentIds = results.values().stream()
                     .flatMap(folderData -> folderData.keySet().stream())
                     .collect(Collectors.toSet());
 
+            // Write each student's data
             for (String studentId : allStudentIds) {
                 writer.print(studentId + ",");
 
                 int totalGrade = 0;
                 boolean graded = false;
-                for (Map.Entry<String, Map<String, Map<String, Integer>>> entry : results.entrySet()) {
-                    Map<String, Map<String, Integer>> folderData = entry.getValue();
-                    Map<String, Integer> studentData = folderData.getOrDefault(studentId, createEmptyGradeMap());
 
-                    int grade = 0;
-                    try {
-                        grade = studentData.getOrDefault("Total", 0);
-                        writer.print(grade + ",");
+                for (Map.Entry<String, Map<String, Map<String, Integer>>> entry : results.entrySet()) {
+                    Map<String, Integer> studentData = entry.getValue().getOrDefault(studentId, createEmptyGradeMap());
+
+                    // Write folder grade (Total)
+                    Integer grade = studentData.get("Total");
+                    writer.print((grade != null ? grade : " ") + ",");
+                    if (grade != null) {
+                        totalGrade += grade;
                         graded = true;
-                    } catch (Exception e) {
-                        writer.print(" ,");
                     }
 
-                    boolean scoreValues = false;
-                    for (Map.Entry<String, Integer> scoreEntry : studentData.entrySet()) {
-                        if (scoreEntry.getKey().startsWith("Score")) {
-                            writer.print(scoreEntry.getValue() + " ");
-                            scoreValues = true;
+                    // Write individual scores in order (Score1, Score2, ...)
+                    for (int i = 1; i <= studentData.size() - 1; i++) { // Skip "Total"
+                        String scoreKey = "Score" + i;
+                        if (studentData.containsKey(scoreKey)) {
+                            writer.print(studentData.get(scoreKey) + " ");
                         }
                     }
-
-                    if (!scoreValues) writer.print(" ");
-                    writer.print(",");
-
-                    totalGrade += grade;
+                    writer.print(","); // End of scores column
                 }
 
-                if (graded)
-                    writer.println(totalGrade);
-                else
-                    writer.println(" ");
+                // Write total grade (if any grades exist)
+                writer.println(graded ? totalGrade : " ");
             }
 
         } catch (IOException e) {
