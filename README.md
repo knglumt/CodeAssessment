@@ -2,96 +2,80 @@
 
 ## Overview
 
-The Code Assessment Tool is a user-friendly Java application designed for assessing and grading code files. This tool provides a set of features to make code evaluation, navigation, and result management easier.
+The **Code Assessment Tool** is a Java-based application designed to assist instructors or reviewers in evaluating programming code efficiently. It combines file navigation, segment-based feedback, grading, and export capabilities within a user-friendly interface.
 
-## Features
+## Key Features
 
 ### 1. User-Friendly Interface
-
-- The application has an intuitive interface for a seamless user experience.
-- The main window displays code in an editable text area, accompanied by a line number area for easy navigation.
-- Various buttons and options are provided for simple interaction.
+- Intuitive GUI with editable code view and line numbers.
+- Split-pane layout with feedback tree on the right.
+- Top and bottom control panels for quick access to operations.
 
 ### 2. File Operations
+- **Open**: Load `.java`, `.txt`, `.cpp`, `.py`, and other supported code files.
+- **Save and Next**: Save changes and automatically open the next file in the directory.
+- **Previous**: Navigate to the previous file.
 
-- **Open Code Files:**
-  - Open code files effortlessly using the file chooser.
-  - The tool keeps track of the current file, displaying its content in the text area.
+### 3. Code Grading & Comment Insertion
+- Double-click to insert structured `/** ASSESSMENT */` blocks with `@grade` and `@feedback`.
+- Automatic matching against a reference file for segment comparison.
+- Grade and feedback suggestions presented in a tree view.
 
-- **Save and Open Next:**
-  - Save changes and move to the next file in the same folder seamlessly.
+### 4. Read-Only & Editable Modes
+- Toggle between segmentation-only (read-only) and grading mode (editable).
+- Prevent accidental comment insertion inside control structures.
 
-- **Navigate Files:**
-  - Easily navigate to the previous file in the same folder.
+### 5. Undo Support
+- Use `Ctrl+Z` to revert the last changes via a custom stack-based history.
 
-### 3. Code Grading
+### 6. Export Assessment to CSV
+- One-click export of all assessment data to a timestamped `.csv` file.
 
-- **Insert Comment Phrases:**
-  - Double-click to insert comment phrases for assessment and grading.
-  - The tool automatically counts the number of comment phrases in the code for grading.
+### 7. Email Integration
+- Automatically email individual results to students based on configuration and file mappings.
 
-- **Read-Only and Editable Modes:**
-  - Choose between read-only and editable modes for different tasks.
+### 8. Assessment Feedback via Tree View
+- View, select, and reuse predefined feedback items from a categorized tree.
+- Tooltip preview of feedback-related code snippets.
+- Prevent double-counting of reused feedback with a dedicated counter.
 
-- **Undo Changes:**
-  - Use the Ctrl+Z shortcut to undo changes and revert the text area to its previous state.
+### 9. Line Number Enhancements
+- Line numbers visually indicate segment boundaries.
+- Red highlighting for mismatch in expected vs. actual segments.
 
-### 4. Export Results to CSV
-
-- Export assessment results to a CSV file effortlessly.
-- The tool processes folders and generates CSV files based on the current working directory.
-
-### 5. Send Assessment Details via Email
-
-- Send assessment details to all students with a simple click.
-- The tool utilizes the EmailSender class to accomplish this task.
-
-### 6. Assessment Feedback
-
-- **Tree View Display:**
-  - View a tree view of assessment comments for a structured overview.
-  - Select a comment in the tree view to view details and make changes.
-
-- **Use Selected Grade:**
-  - Apply the selected grade from the comments tree to update the code.
-
-- **Grade Modification:**
-  - Double-click on the feedback on the tree view to modify grading information in a user-friendly manner.
-
-### 7. Line Number Area Enhancements
-
-- **Color-Coded Labels:**
-  - Line number labels are color-coded to provide visual feedback on comment counts.
-
-### 8. Grade Insertion
-
-- **Insert Grades and Feedback:**
-  - Add grades and feedback at specific positions in the code for an improved grading process.
+### 10. Violation Detection
+- Automatically warns about forbidden use of:
+  - External data structures (except stack)
+  - Array or collection modifications
 
 ## Getting Started
 
-To run the Code Assessment Tool, follow these steps:
+### Requirements
+- Java 8 or later
 
-1. Ensure you have Java installed on your system.
-2. Compile the Java file: `javac CodeAssessment.java`.
-3. Run the application: `java CodeAssessment` or `java -jar CodeAssessment.jar`.
+### Run Instructions
+```
+javac CodeAssessment.java
+java CodeAssessment
+```
+Or:
+```
+java -jar CodeAssessment.jar
+```
 
-## Usage
+## Usage Tips
 
-- Open a code file using the "Open" button.
-- Navigate through files using the "Next," "Previous," and "Save and Open Next" buttons.
-- Edit code in either read-only or editable mode.
-- Double-click to insert comment phrases related to assessment and grading.
-- Utilize the undo feature with Ctrl+Z.
-- Export assessment results to a CSV file using the "Export CSV" button.
-- Send assessment details via email using the "Send Mails" button.
-- Use the tree view to navigate assessment comments and apply grades.
-- Modify grades and feedback by double-clicking on `ASSESSMENT` or `@grade` phrases.
+- Use **Open** to select the file to assess.
+- Double-click on a code line to insert or update an assessment block.
+- Select feedback from the tree and double-click to apply.
+- Use **Next** or **Previous** to navigate through student files.
+- Click **Export CSV** to generate a report.
+- Click **Send Mails** to email feedback automatically.
 
 ## Contributing
 
-Contributions to the Code Assessment Tool are welcome. Feel free to open issues, submit feature requests, or contribute to the codebase.
+Pull requests, issues, and feature suggestions are welcome. Feel free to fork the repo and make your changes.
 
 ## License
 
-This Code Assessment Tool is licensed under the [MIT License](LICENSE). Feel free to use, modify, and distribute the code according to the terms of the license.
+This tool is licensed under the [MIT License](LICENSE). Use, modify, and distribute freely.

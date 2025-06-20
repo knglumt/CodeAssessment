@@ -1,9 +1,9 @@
-package org.assessment;
 
 import org.assessment.codesplitter.CodeSplitter;
 import org.assessment.codesplitter.LineCalculator;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.*;
 import javax.swing.event.*;
 import javax.swing.text.*;
@@ -11,14 +11,13 @@ import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.net.URI;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.nio.charset.StandardCharsets;
-
-
 
 /**
  * This class represents a Code Assessment tool with a graphical user interface (GUI).
@@ -45,17 +44,37 @@ public class CodeAssessment {
     private final JRadioButton readOnlyRadioButton;
     private static boolean hasTextAfterGrade;
     private int currentLineCount;
-
     private int startIndexofAssesment;
     private FeedbackTree feedbackTree;
     private final JTree commentsTree;
+    private final JTextField clickCounterLabel;
+    private int doubleClickCount = 0;
+    private Timer tooltipTimer;
+    private String username;
+    private static final String FEEDBACK_STATS_SUFFIX = "_stats.txt";
+    private static final String FEEDBACK_STATS_FOLDER = "stats";
+
+    // Patterns for both Java and C++
+    private static final Pattern EXTERNAL_DS_PATTERN = Pattern.compile(
+            "\\b(ArrayList|LinkedList|Vector|Queue|Deque|PriorityQueue|TreeSet|HashSet|LinkedHashSet|TreeMap|HashMap|LinkedHashMap|" +  // Java
+                    "std\\s*::\\s*(vector|list|deque|queue|priority_queue|set|multiset|map|multimap|unordered_set|unordered_map))\\b"  // C++
+    );
 
     /**
      * Constructor for the CodeAssessment class, sets up the GUI and initializes components.
      */
     public CodeAssessment() {
-        frame = new JFrame("Code Assessment");
-        frame.setSize(800, 600);
+
+        username = JOptionPane.showInputDialog(null, "Enter your name:", "User Identification", JOptionPane.PLAIN_MESSAGE);
+
+        if (username == null || username.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Username is required. Exiting...");
+            System.exit(0);
+        }
+        username = username.toLowerCase().trim();
+
+        frame = new JFrame("CAGE - Code Assessment and Grading Environment");
+        frame.setSize(1024, 768);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         textArea = new JTextArea();
@@ -65,8 +84,12 @@ public class CodeAssessment {
         lineNumberArea = new LineNumberArea(textArea);
         frame.add(lineNumberArea, BorderLayout.WEST);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel buttonPanel = new JPanel(new BorderLayout());
         frame.add(buttonPanel, BorderLayout.NORTH);
+
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
 
         JPanel paramPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         frame.add(paramPanel, BorderLayout.SOUTH);
@@ -118,14 +141,24 @@ public class CodeAssessment {
         commentsTree = new JTree();
         commentsTree.setVisible(false);
 
-        buttonPanel.add(openButton);
-        buttonPanel.add(previousButton);
-        buttonPanel.add(saveAndOpenButton);
-        buttonPanel.add(exportCSVButton);
-        buttonPanel.add(mailButton);
-        buttonPanel.add(fileNameLabel);
-        buttonPanel.add(commentCountField);
-        buttonPanel.add(fileNameLabel);
+        clickCounterLabel = new JTextField("REUSED FEEDBACKS: ____");
+        clickCounterLabel.setEditable(false);
+        clickCounterLabel.setFont(clickCounterLabel.getFont().deriveFont(Font.BOLD));
+        clickCounterLabel.setForeground(Color.RED);
+
+        loadUserStats(); // Load saved feedback count if exists
+
+        tooltipTimer = new Timer(300, null); // 300ms delay
+        tooltipTimer.setRepeats(false); // Only run once
+
+        leftPanel.add(openButton);
+        leftPanel.add(previousButton);
+        leftPanel.add(saveAndOpenButton);
+        leftPanel.add(exportCSVButton);
+        leftPanel.add(mailButton);
+        leftPanel.add(fileNameLabel);
+        leftPanel.add(commentCountField);
+        leftPanel.add(clickCounterLabel);
 
         paramPanel.add(readOnlyRadioButton);
         paramPanel.add(editableRadioButton);
@@ -140,6 +173,47 @@ public class CodeAssessment {
         defaultFolder = new File(System.getProperty("user.dir"));
 
         //createTreeViewPopupMenu();
+
+        // About Icon Button
+        JButton aboutButton = new JButton("@bout");
+        aboutButton.setToolTipText("About this tool");
+        aboutButton.setBorderPainted(false);
+        aboutButton.setContentAreaFilled(false);
+        aboutButton.setFocusPainted(false);
+        aboutButton.setFont(new Font("Arial", Font.BOLD, 12));
+        aboutButton.setForeground(Color.BLUE);
+
+        rightPanel.add(aboutButton);
+
+        buttonPanel.add(leftPanel, BorderLayout.WEST);
+        buttonPanel.add(rightPanel, BorderLayout.EAST);
+
+        aboutButton.addActionListener(e -> {
+            JPanel panel = new JPanel(new BorderLayout(5, 5));
+
+            JLabel label = new JLabel("<html>" +
+                    "<h3>CAGE - Code Assessment and Grading Environment</h3>" +
+                    "<p>Author: Umit Kanoglu</p>" +
+                    "<p><a href='https://github.com/knglumt/CodeAssessment'>GitHub Repository</a></p>" +
+                    "</html>");
+
+            label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            label.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    try {
+                        Desktop.getDesktop().browse(new URI("https://github.com/knglumt/CodeAssessment"));
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(frame, "Failed to open browser:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            });
+
+            panel.add(label, BorderLayout.CENTER);
+
+            JOptionPane.showMessageDialog(frame, panel, "About CAGE", JOptionPane.INFORMATION_MESSAGE);
+        });
+
 
         fontSizeComboBox.addActionListener(new ActionListener() {
             @Override
@@ -193,6 +267,23 @@ public class CodeAssessment {
             @Override
             public void keyReleased(KeyEvent e) {
 
+                int caretPosition = textArea.getCaretPosition();
+                String controlStatementRegex = "\\b(if|else\\s*if|else|for|while|do|switch|case|try|catch|finally|goto|throw)\\b.*\\{";
+                Pattern controlPattern = Pattern.compile(controlStatementRegex);
+                Matcher matcher = controlPattern.matcher(textArea.getText());
+                while (matcher.find()) {
+                    int controlStart = matcher.start();
+                    int openingBracePos = textArea.getText().indexOf("{", controlStart);
+
+                    int closingBracePos = findMatchingClosingBrace(openingBracePos);
+
+                    if (caretPosition > openingBracePos && caretPosition < closingBracePos) {
+                        JOptionPane.showMessageDialog(frame, "Cannot insert comments inside control statement bodies!", "Insertion Error", JOptionPane.WARNING_MESSAGE);
+                        undo();
+                        return;
+                    }
+                }
+
                 unsavedChanges = true;
 
                 if (((e.getKeyCode() == KeyEvent.VK_Z) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0))
@@ -220,47 +311,50 @@ public class CodeAssessment {
             }
         });
 
-        commentsTree.addMouseListener(new MouseAdapter() {
-                                          @Override
-                                          public void mouseClicked(MouseEvent e) {
-                                              if (e.getClickCount() == 2) {
-                                                  TreePath selectedPath = commentsTree.getPathForLocation(e.getX(), e.getY());
-                                                  if (selectedPath != null) {
-                                                      DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
-                                                      if (selectedNode != null) {
-                                                          useThisGrade();
-                                                      }
-                                                  }
-                                              }
-                                          }
-                                      });
-
-        commentsTree.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                JTree tree = (JTree) e.getSource();
-                TreePath path = tree.getPathForLocation(e.getX(), e.getY());
-                if (path != null) {
-                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-                    if (node != null && node.getUserObject() != null) {
-                        String feedback = node.getUserObject().toString();
-                        if (!feedback.isEmpty()) {
-                            String codeSnippet = feedbackTree.findCodeSnippet(feedback);
-                            if (codeSnippet != null) {
-                                feedbackTree.showFeedbackCodeSnippetTooltip(tree, e.getX(), e.getY(), codeSnippet);
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
         mailButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 sendMail();
             }
         });
+
+        commentsTree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (!SwingUtilities.isLeftMouseButton(e)) return;
+
+                TreePath selectedPath = commentsTree.getPathForLocation(e.getX(), e.getY());
+                if (selectedPath == null) return;
+
+                commentsTree.setSelectionPath(selectedPath);
+                DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+                if (selectedNode == null || selectedNode.getUserObject() == null) return;
+
+                if (e.getClickCount() == 2) {
+                    tooltipTimer.stop(); // Cancel tooltip
+                    useThisGrade();      // Handle double-click
+                } else if (e.getClickCount() == 1) {
+                    // Delay tooltip to avoid blocking double-click
+                    tooltipTimer.stop(); // Ensure no other timer is running
+                    tooltipTimer = new Timer(300, evt -> {
+                        showTooltipIfAvailable(selectedNode, e);
+                    });
+                    tooltipTimer.setRepeats(false);
+                    tooltipTimer.start();
+                }
+            }
+
+            private void showTooltipIfAvailable(DefaultMutableTreeNode node, MouseEvent e) {
+                String feedback = node.getUserObject().toString();
+                if (feedback.isEmpty() || feedbackTree == null) return;
+
+                String codeSnippet = feedbackTree.findCodeSnippet(feedback);
+                if (codeSnippet != null) {
+                    feedbackTree.showFeedbackCodeSnippetTooltip(commentsTree, e.getX(), e.getY(), codeSnippet);
+                }
+            }
+        });
+
 
 
         frame.setVisible(true);
@@ -302,6 +396,8 @@ public class CodeAssessment {
                 paintLabels(currentFile.toPath(), commentPattern);
                 contentStack.clear();
                 contentStack.push(textArea.getText());
+
+                detectAndMarkViolations();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -513,8 +609,12 @@ public class CodeAssessment {
             paintLabels(currentFile.toPath(), commentPattern);
             contentStack.clear();
             contentStack.push(textArea.getText());
+
+            detectAndMarkViolations();
+
             //findRefCode();
             setFeedbackTree(0);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -655,8 +755,8 @@ public class CodeAssessment {
         startIndexofAssesment = text.lastIndexOf("ASSESSMENT", offset);
         if (startIndexofAssesment != -1) {
             return countAssessmentOccurrences(text, startIndexofAssesment);
-            } else
-                return 0;
+        } else
+            return 0;
     }
 
     /**
@@ -688,11 +788,65 @@ public class CodeAssessment {
             if (selectedPath != null) {
                 DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
                 if (selectedNode != null) {
+                    // Build what we plan to insert
+                    String selectedFeedback = "@feedback " + selectedNode.toString();
+                    String selectedGrade = "@grade " + selectedNode.getParent().toString();
+
+                    // Get the current text of the ASSESSMENT block
+                    int commentStart = textArea.getText().lastIndexOf("/**", startIndexofAssesment);
+                    int commentEnd = textArea.getText().indexOf("*/", commentStart) + 2;
+
+                    if (commentStart != -1 && commentEnd != -1) {
+                        String existingCommentBlock = textArea.getText().substring(commentStart, commentEnd);
+
+                        // If feedback and grade already exist, don't count it
+                        if (existingCommentBlock.contains(selectedFeedback) && existingCommentBlock.contains(selectedGrade)) {
+                            return; // skip update and count
+                        }
+                    }
+
                     removeAndInsertGradeAndFeedback(startIndexofAssesment, selectedNode);
+                    doubleClickCount++;
+                    clickCounterLabel.setText("REUSED FEEDBACKS: " + doubleClickCount);
+                    saveUserStats();
                 }
             }
         }
     }
+
+
+    private void saveUserStats() {
+        try {
+            File folder = new File(FEEDBACK_STATS_FOLDER);
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+            File statsFile = new File(folder, username + FEEDBACK_STATS_SUFFIX);
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(statsFile))) {
+                writer.write("reusedFeedbacks=" + doubleClickCount);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadUserStats() {
+        File statsFile = new File(FEEDBACK_STATS_FOLDER, username + FEEDBACK_STATS_SUFFIX);
+        if (statsFile.exists()) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(statsFile))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("reusedFeedbacks=")) {
+                        doubleClickCount = Integer.parseInt(line.split("=")[1].trim());
+                        clickCounterLabel.setText("REUSED FEEDBACKS:    " + doubleClickCount);
+                    }
+                }
+            } catch (IOException | NumberFormatException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
     private void setFeedbackTree(int offset){
         String RefCode = null;
@@ -765,6 +919,61 @@ public class CodeAssessment {
         }
     }
 
+    /**
+     * Detects coding violations in both Java and C++ code and adds them as comments at the top of the file.
+     * Specifically checks for:
+     * - Use of external data structures (except stack)
+     * - Modifications to arrays, stacks, or collections
+     */
+    private void detectAndMarkViolations() {
+        if (readOnlyRadioButton.isSelected()) {
+            return;
+        }
+
+        String code = textArea.getText();
+        StringBuilder violations = new StringBuilder();
+
+        // Check for use of disallowed external data structures
+        Matcher dsMatcher = EXTERNAL_DS_PATTERN.matcher(code);
+        if (dsMatcher.find()) {
+            violations.append("// WARNING! Use of external data structures other than stack is forbidden!\n");
+        }
+
+        // Check for modifications to arrays and collections
+        String[] modificationPatterns = {
+                "\\w+\\s*\\[\\s*\\w+\\s*]\\s*=\\s*[^=]",                 // array[index] = value;
+                "\\.push\\s*\\(",                                        // stack.push(...)
+                "\\.pop\\s*\\(",                                         // stack.pop()
+                "\\.add\\s*\\(",                                         // list.add(...)
+                "\\.remove\\s*\\(",                                      // list.remove(...)
+                "\\.put\\s*\\(",                                         // map.put(...)
+                "\\.clear\\s*\\(",                                       // collection.clear()
+                "\\.set\\s*\\("                                          // list.set(...)
+        };
+
+        for (String pattern : modificationPatterns) {
+            Pattern p = Pattern.compile(pattern);
+            Matcher m = p.matcher(code);
+            if (m.find()) {
+                violations.append("// WARNING! Modifying arrays or collection values is not allowed!\n");
+                break;
+            }
+        }
+
+        // If violations found, prepend them to the file
+        if (violations.length() > 0) {
+            try {
+                // Remove existing violation comments
+                String cleanedCode = code.replaceAll("(?m)^\\s*//\\s*WARNING!.*\\n", "");
+                textArea.setText(violations.toString() + cleanedCode);
+                unsavedChanges = true;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
 
     /**
      * Main method to start the CodeAssessment application.
@@ -773,11 +982,11 @@ public class CodeAssessment {
      */
     public static void main(String[] args) {
 
-            SwingUtilities.invokeLater(new Runnable() {
-                public void run() {
-                    new CodeAssessment();
-                }
-            });
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                new CodeAssessment();
+            }
+        });
     }
 
     /**
