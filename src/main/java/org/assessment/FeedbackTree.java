@@ -1,5 +1,3 @@
-package org.assessment;
-
 import org.assessment.tool.JMultiLineToolTip;
 
 import javax.swing.*;
