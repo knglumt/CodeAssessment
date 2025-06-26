@@ -80,6 +80,8 @@ Pull requests, issues, and feature suggestions are welcome. Feel free to fork th
 
 This tool is licensed under the [MIT License](LICENSE). Use, modify, and distribute freely.
 
-## Publication
+## Citation
 
-If you use CAGE in any academic study, please cite the article DOI: 10.1109/UBMK63289.2024.10773535
+If you use **CAGE** in any academic study, please cite the following article:
+
+[DOI: 10.1109/UBMK63289.2024.10773535](https://doi.org/10.1109/UBMK63289.2024.10773535)
