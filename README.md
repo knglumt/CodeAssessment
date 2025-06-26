@@ -45,7 +45,7 @@ The **Code Assessment Tool** is a Java-based application designed to assist inst
 
 ### 10. Violation Detection
 - Automatically warns about forbidden use of:
-  - External data structures (except stack)
+  - External data structures
   - Array or collection modifications
 
 ## Getting Started
