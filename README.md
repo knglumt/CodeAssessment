@@ -79,3 +79,7 @@ Pull requests, issues, and feature suggestions are welcome. Feel free to fork th
 ## License
 
 This tool is licensed under the [MIT License](LICENSE). Use, modify, and distribute freely.
+
+## Publication
+
+If you use CAGE in any academic study, please cite the article DOI: 10.1109/UBMK63289.2024.10773535
