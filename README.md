@@ -1,4 +1,4 @@
-# Code Assessment Tool
+# CAGE: Code Assessment and Grading Environment
 
 ## Overview
 
