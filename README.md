@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Code Assessment Tool** is a Java-based application designed to assist instructors or reviewers in evaluating programming code efficiently. It combines file navigation, segment-based feedback, grading, and export capabilities within a user-friendly interface.
+The **CAGE** is a Java-based application designed to assist instructors or reviewers in evaluating programming code efficiently. It combines file navigation, segment-based feedback, grading, and export capabilities within a user-friendly interface.
 
 ## Key Features
 
